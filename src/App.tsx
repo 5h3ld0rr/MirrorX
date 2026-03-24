@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle, memo } from 'react';
 import axios from 'axios';
+// @ts-ignore
+import WebGLFluid from 'webgl-fluid';
 import { 
   User, 
   Cloud, 
@@ -25,6 +27,32 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
+const FluidBackground = memo(() => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      WebGLFluid(canvasRef.current, {
+        IMMEDIATE: true,
+        TRANSPARENT: false,
+        DENSITY_DISSIPATION: 3.5,
+        VELOCITY_DISSIPATION: 2.0,
+        PRESSURE: 0.8,
+        SPLAT_RADIUS: 0.5,
+        COLOR_PALETTE: ['#00f2ff', '#0090ff', '#00d0ff'],
+        CURL: 20,
+        SHADING: true,
+        PAUSED: false,
+        BACK_COLOR: { r: 0, g: 0, b: 0 },
+        BLOOM: false,
+        SUNRAYS: false
+      });
+    }
+  }, []);
+
+  return <canvas id="fluid-canvas" ref={canvasRef} />;
+});
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 /**
@@ -35,7 +63,7 @@ const exchangeToken = async (customToken: string) => {
   return await userCred.user.getIdToken();
 };
 
-const Clock = () => {
+const Clock = memo(() => {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -49,9 +77,9 @@ const Clock = () => {
       <div className="date">{time.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}</div>
     </div>
   );
-};
+});
 
-const Weather = () => {
+const Weather = memo(() => {
   return (
     <div className="glass-panel" style={{ width: '250px', textAlign: 'right' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', marginBottom: '1rem' }}>
@@ -72,7 +100,7 @@ const Weather = () => {
       </div>
     </div>
   );
-};
+});
 
 const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity, isPaused }: { 
   onUserAuth: (user: any) => void, 
@@ -422,12 +450,14 @@ function App() {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: hasInteracted || isAuthModalOpen ? 1 : 0 }}
-      transition={{ duration: 1.5, ease: "easeOut" }}
-      className="mirror-container"
-    >
+    <>
+      <FluidBackground />
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: hasInteracted || isAuthModalOpen ? 1 : 0 }}
+        transition={{ duration: 1.5, ease: "easeOut" }}
+        className="mirror-container"
+      >
       {/* Top Section */}
       <div className="top-bar">
         {user ? (
@@ -485,7 +515,8 @@ function App() {
         }}
         getPhotoBlob={() => faceAuthRef.current?.getBlob() || Promise.resolve(null)}
       />
-    </motion.div>
+      </motion.div>
+    </>
   );
 }
 
