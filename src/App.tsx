@@ -205,8 +205,9 @@ const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity
             } else {
               setStatus('Face not recognized');
             }
-          } catch (err) {
-            setStatus('Searching...');
+          } catch (err: any) {
+            const errorMsg = err.response?.data?.error || 'Searching...';
+            setStatus(errorMsg);
           }
         }
         setIsScanning(false);
@@ -229,7 +230,16 @@ const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity
         textAlign: 'center',
         width: '100%'
       }}>
-        <div className="glitch-text" style={{ fontSize: '0.8rem', color: isScanning ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
+        <div 
+          className="glitch-text" 
+          style={{ 
+            fontSize: '0.8rem', 
+            color: (status.includes('closer') || status.includes('far')) ? '#ff4d4d' : (isScanning ? 'var(--accent-primary)' : 'var(--text-muted)'),
+            fontWeight: '400',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1rem'
+          }}
+        >
           {status}
         </div>
       </div>
