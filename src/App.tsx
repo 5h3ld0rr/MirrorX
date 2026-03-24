@@ -83,6 +83,7 @@ const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity
 }, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [status, setStatus] = useState('Idle');
 
@@ -102,6 +103,7 @@ const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity
 
   useEffect(() => {
     let interval: any;
+    
     if (hasInteracted && !isLoggedIn) {
       startCamera();
       if (!isPaused) {
@@ -111,6 +113,7 @@ const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity
       }
     } else {
       stopCamera();
+      setStatus('Idle');
     }
     
     return () => {
@@ -121,10 +124,10 @@ const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity
 
   const startCamera = async () => {
     try {
-      // Check if camera is already active
-      if (videoRef.current?.srcObject) return;
+      if (streamRef.current) return;
       
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
@@ -135,9 +138,11 @@ const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity
   };
 
   const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach(track => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
   };
