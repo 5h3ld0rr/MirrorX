@@ -43,15 +43,25 @@ const FluidBackground = memo(() => {
   useEffect(() => {
     if (canvasRef.current) {
       WebGLFluid(canvasRef.current, {
+        TRIGGER: 'click',
         IMMEDIATE: true,
         TRANSPARENT: false,
+        AUTO: false,
+        INTERVAL: 3000,
+        SIM_RESOLUTION: 128,
+        DYE_RESOLUTION: 1024,
+        CAPTURE_RESOLUTION: 512,
         DENSITY_DISSIPATION: 3.5,
         VELOCITY_DISSIPATION: 2.0,
         PRESSURE: 0.8,
-        SPLAT_RADIUS: 0.5,
-        COLOR_PALETTE: ['#00f2ff', '#0090ff', '#00d0ff'],
+        PRESSURE_ITERATIONS: 20,
         CURL: 20,
+        SPLAT_RADIUS: 0.5,
+        SPLAT_FORCE: 6000,
+        SPLAT_COUNT: Math.floor(Math.random() * 20) + 5,
         SHADING: true,
+        COLORFUL: true,
+        COLOR_UPDATE_SPEED: 10,
         PAUSED: false,
         BACK_COLOR: { r: 0, g: 0, b: 0 },
         BLOOM: false,
@@ -863,45 +873,42 @@ function App() {
       if (isAuthModalOpen || showWelcome) return;
 
       // Stage 1: Sleep (Fade dashboard)
-      sleepTimeout = setTimeout(() => {
-        setHasInteracted(false); 
-      }, STANDBY_DELAY);
+      if (hasInteracted) {
+        sleepTimeout = setTimeout(() => {
+          setHasInteracted(false); 
+        }, STANDBY_DELAY);
+      }
 
-      // Stage 2: Termination (Full Logout)
+      // Stage 2: Termination (Full Logout - 1s after sleep or full delay if active)
+      const logoutDelay = hasInteracted ? STANDBY_DELAY + 1000 : 1000;
       terminationTimeout = setTimeout(() => {
-        handleLogout();
-      }, STANDBY_DELAY + 1000);
+        if (user) handleLogout();
+      }, logoutDelay);
     };
 
     const handleInteraction = () => {
-      if (!hasInteracted) {
-        setHasInteracted(true);
-      }
+      setHasInteracted(true);
       resetTimers();
     };
 
     // Global Activity Listeners
-    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+    const activityEvents = ['click', 'mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
     activityEvents.forEach(event => {
-      window.addEventListener(event, resetTimers);
+      window.addEventListener(event, handleInteraction);
     });
 
-    window.addEventListener('click', handleInteraction);
-    window.addEventListener('touchstart', handleInteraction);
 
-    // Initial timer start
-    if (hasInteracted || isAuthModalOpen) resetTimers();
+    // Initial timer start - Always run if we have a user or interaction
+    if (hasInteracted || isAuthModalOpen || user) resetTimers();
 
     return () => {
       activityEvents.forEach(event => {
-        window.removeEventListener(event, resetTimers);
+        window.removeEventListener(event, handleInteraction);
       });
-      window.removeEventListener('click', handleInteraction);
-      window.removeEventListener('touchstart', handleInteraction);
       if (sleepTimeout) clearTimeout(sleepTimeout);
       if (terminationTimeout) clearTimeout(terminationTimeout);
     };
-  }, [hasInteracted, isAuthModalOpen, showWelcome]);
+  }, [hasInteracted, isAuthModalOpen, showWelcome, user]);
 
   return (
     <>
