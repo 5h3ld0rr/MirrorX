@@ -256,6 +256,7 @@ video {
   border-radius: 50%;
   opacity: 0.4;
   filter: grayscale(100%) contrast(120%);
+  transform: scaleX(-1);
 }
 
 .auth-overlay {
