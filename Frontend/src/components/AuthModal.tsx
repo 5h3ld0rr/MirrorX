@@ -60,6 +60,13 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth }: {
     });
   };
 
+  const resetForm = () => {
+    setEmail('');
+    setPassword('');
+    setName('');
+    setError('');
+  };
+
   const handleSubmit = async () => {
     setIsLoading(true);
     setError('');
@@ -85,6 +92,7 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth }: {
           email: userCred.user.email,
           token: await userCred.user.getIdToken()
         });
+        resetForm();
         onClose();
       } else {
         if (!name || !email || !password) {
@@ -119,6 +127,7 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth }: {
         if (response.data.userId) {
           const idToken = await exchangeToken(response.data.token);
           onUserAuth({ ...response.data.user, token: idToken });
+          resetForm();
           onClose();
         }
       }

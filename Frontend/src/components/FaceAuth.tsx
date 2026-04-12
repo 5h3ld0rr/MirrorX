@@ -29,23 +29,25 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
     }
   }));
 
+  const intervalRef = useRef<any>(null);
+  const failCountRef = useRef<number>(0);
+
   useEffect(() => {
-    let interval: any;
-    
     if (hasInteracted && !isLoggedIn) {
-      startCamera();
       if (!isPaused) {
-        interval = setInterval(captureAndAuth, 5000); // Try auth every 5 seconds
+        startCamera();
+        intervalRef.current = setInterval(captureAndAuth, 5000);
       } else {
         setStatus('Registration Preview Active');
       }
     } else {
+      failCountRef.current = 0; // Reset failures when screen goes off
       stopCamera();
       setStatus('Idle');
     }
-    
+
     return () => {
-      if (interval) clearInterval(interval);
+      if (intervalRef.current) clearInterval(intervalRef.current);
       stopCamera();
     };
   }, [hasInteracted, isLoggedIn, isPaused]);
@@ -78,6 +80,15 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
   const captureAndAuth = async () => {
     if (!videoRef.current || !canvasRef.current || isScanning) return;
 
+    if (failCountRef.current >= 5) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      stopCamera(); // Shut down camera to allow mirror to sleep
+      return;
+    }
+
     // Call onActivity to prevent sleep during scanning
     if (onActivity) onActivity();
 
@@ -99,19 +110,42 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
           try {
             const response = await axios.post(`${API_BASE_URL}/auth/login`, formData);
             if (response.data.success) {
+              failCountRef.current = 0;
               setStatus('Authenticated');
               const idToken = await exchangeToken(response.data.token);
               onUserAuth({ ...response.data.user, token: idToken });
             } else {
-              setStatus('Face not recognized');
+              handleFailure('Face not recognized');
             }
           } catch (err: any) {
-            const errorMsg = err.response?.data?.error || 'Searching...';
-            setStatus(errorMsg);
+            if (!err.response) {
+              // Network error / backend unreachable — stop scanning
+              if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+              }
+              setStatus('Backend unavailable');
+            } else {
+              const errorMsg = err.response?.data?.error || 'Searching...';
+              handleFailure(errorMsg);
+            }
           }
         }
         setIsScanning(false);
       }, 'image/jpeg');
+    }
+  };
+
+  const handleFailure = (msg: string) => {
+    failCountRef.current += 1;
+    if (failCountRef.current >= 5) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setStatus('Max attempts reached. Please let screen turn off to retry.');
+    } else {
+      setStatus(msg);
     }
   };
 
