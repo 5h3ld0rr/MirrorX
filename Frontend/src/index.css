@@ -254,9 +254,10 @@ video {
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
-  opacity: 0.4;
-  filter: grayscale(100%) contrast(120%);
+  opacity: 0.7;
+  filter: grayscale(80%) contrast(110%) brightness(1.1);
   transform: scaleX(-1);
+  transition: opacity 0.5s ease;
 }
 
 .auth-overlay {
@@ -278,3 +279,24 @@ video {
   text-align: left;
 }
 
+
+/* Status Icon States */
+.status-icon-scanning {
+  animation: status-pulse 1.5s infinite ease-in-out;
+  color: var(--accent-primary);
+}
+
+.status-icon-success {
+  color: #10b981 !important; /* Emerald */
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
+}
+
+.status-icon-error {
+  color: #f43f5e !important; /* Rose */
+  filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.5));
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}

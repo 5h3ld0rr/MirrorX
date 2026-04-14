@@ -1,10 +1,10 @@
 import { useState, useEffect, memo } from 'react';
 import axios from 'axios';
-import { 
-  Cloud, 
-  CloudSun, 
-  CloudRain, 
-  CloudLightning, 
+import {
+  Cloud,
+  CloudSun,
+  CloudRain,
+  CloudLightning,
   Sun,
   Droplets,
   Wind
@@ -42,7 +42,7 @@ export const Weather = memo(({ isActive }: { isActive: boolean }) => {
       navigator.geolocation.getCurrentPosition(
         (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude)
       );
-    }, 600000); 
+    }, 600000);
 
     return () => clearInterval(interval);
   }, [isActive]);
@@ -62,18 +62,15 @@ export const Weather = memo(({ isActive }: { isActive: boolean }) => {
 
   return (
     <AnimatePresence>
-      <motion.div 
+      <motion.div
+        transition={{ duration: 1 }}
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 20 }}
-        className="glass-panel" 
-        style={{ 
-          width: '280px', 
-          textAlign: 'right', 
-          background: 'hsla(0, 0%, 100%, 0.03)',
-          border: '1px solid var(--border-light)',
+        style={{
+          width: '280px',
+          textAlign: 'right',
           padding: '1.2rem 1.5rem',
-          borderRadius: '20px'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1.2rem', marginBottom: '1rem' }}>
@@ -85,11 +82,11 @@ export const Weather = memo(({ isActive }: { isActive: boolean }) => {
             {condition.icon}
           </div>
         </div>
-        
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'flex-end', 
-          gap: '1.2rem', 
+
+        <div style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '1.2rem',
           borderTop: '1px solid hsla(0,0%,100%,0.05)',
           paddingTop: '0.8rem'
         }}>

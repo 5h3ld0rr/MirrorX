@@ -1,19 +1,27 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import axios from 'axios';
+import { WifiOff, ShieldAlert, Scan } from 'lucide-react';
 import { API_BASE_URL, exchangeToken } from '../lib/api';
 
-export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity, isPaused }: { 
+export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity, isPaused, isOnline, onStatusChange }: { 
   onUserAuth: (user: any) => void, 
   hasInteracted: boolean,
   isLoggedIn: boolean,
   onActivity?: () => void,
-  isPaused?: boolean
+  isPaused?: boolean,
+  isOnline?: boolean,
+  onStatusChange?: (status: string) => void
 }, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [status, setStatus] = useState('Idle');
+  const [status, setStatusInternal] = useState('Idle');
+  const setStatus = (newStatus: string) => {
+    setStatusInternal(newStatus);
+    if (onStatusChange) onStatusChange(newStatus);
+  };
+  const [isCameraEnabled, setIsCameraEnabled] = useState(false);
 
   useImperativeHandle(ref, () => ({
     getBlob: async (): Promise<Blob | null> => {
@@ -34,6 +42,13 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
 
   useEffect(() => {
     if (hasInteracted && !isLoggedIn) {
+      if (!isOnline) {
+        setStatus('OFFLINE');
+        stopCamera();
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        return;
+      }
+
       if (!isPaused) {
         startCamera();
         intervalRef.current = setInterval(captureAndAuth, 5000);
@@ -50,20 +65,28 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
       if (intervalRef.current) clearInterval(intervalRef.current);
       stopCamera();
     };
-  }, [hasInteracted, isLoggedIn, isPaused]);
+  }, [hasInteracted, isLoggedIn, isPaused, isOnline]);
+
+  useEffect(() => {
+    if (isCameraEnabled && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [isCameraEnabled]);
 
   const startCamera = async () => {
     try {
-      if (streamRef.current) return;
+      if (streamRef.current) {
+        setIsCameraEnabled(true);
+        return;
+      }
       
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      setIsCameraEnabled(true);
     } catch (err) {
       console.error("Error accessing camera:", err);
       setStatus('Camera Error');
+      setIsCameraEnabled(false);
     }
   };
 
@@ -75,6 +98,7 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    setIsCameraEnabled(false);
   };
 
   const captureAndAuth = async () => {
@@ -125,6 +149,7 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
                 intervalRef.current = null;
               }
               setStatus('Backend unavailable');
+              setIsCameraEnabled(false);
             } else {
               const errorMsg = err.response?.data?.error || 'Searching...';
               handleFailure(errorMsg);
@@ -143,6 +168,7 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      stopCamera();
       setStatus('Max attempts reached. Please let screen turn off to retry.');
     } else {
       setStatus(msg);
@@ -153,30 +179,33 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
 
   return (
     <div className="main-content">
-      <div className={`scanning-ring ${isScanning ? 'active' : ''}`}>
-        <video ref={videoRef} autoPlay muted playsInline />
-        <canvas ref={canvasRef} style={{ display: 'none' }} />
-        <div className="scan-line"></div>
-      </div>
-      <div style={{ 
-        position: 'absolute', 
-        bottom: '-3rem', 
-        textAlign: 'center',
-        width: '100%'
-      }}>
-        <div 
-          className="glitch-text" 
-          style={{ 
-            fontSize: '0.8rem', 
-            color: (status.includes('closer') || status.includes('far')) ? '#ff4d4d' : (isScanning ? 'var(--accent-primary)' : 'var(--text-muted)'),
-            fontWeight: '400',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1rem'
-          }}
-        >
-          {status}
+      {isCameraEnabled && (
+        <div className={`scanning-ring ${isScanning ? 'active' : ''}`}>
+          <video ref={videoRef} autoPlay muted playsInline />
+          <canvas ref={canvasRef} style={{ display: 'none' }} />
+          <div className="scan-line"></div>
         </div>
-      </div>
+      )}
+      {status !== 'Idle' && (
+        <div style={{ 
+          position: 'absolute', 
+          bottom: '-3rem', 
+          textAlign: 'center',
+          width: '100%'
+        }}>
+          <div 
+            className="glitch-text" 
+            style={{ 
+              fontSize: '0.8rem', 
+              color: (status.includes('closer') || status.includes('far')) ? '#ff4d4d' : (isScanning ? 'var(--accent-primary)' : 'var(--text-muted)'),
+              fontWeight: '400',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1rem'
+            }}
+          >
+          </div>
+        </div>
+      )}
     </div>
   );
 });

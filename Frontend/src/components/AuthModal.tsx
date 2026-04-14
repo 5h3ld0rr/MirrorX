@@ -6,10 +6,11 @@ import { API_BASE_URL, exchangeToken } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, UserPlus, X } from 'lucide-react';
 
-export const AuthModal = ({ isOpen, onClose, onUserAuth }: { 
+export const AuthModal = ({ isOpen, onClose, onUserAuth, isOnline }: { 
   isOpen: boolean, 
   onClose: () => void, 
-  onUserAuth: (user: any) => void
+  onUserAuth: (user: any) => void,
+  isOnline: boolean
 }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -258,10 +259,19 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth }: {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', marginTop: '1.5rem' }}>
               <button 
                 onClick={handleSubmit}
-                disabled={isLoading}
-                style={{ width: '100%', background: 'var(--accent-primary)', color: 'black', fontWeight: 600, padding: '1rem', borderRadius: '12px' }}
+                disabled={isLoading || !isOnline}
+                style={{ 
+                  width: '100%', 
+                  background: isOnline ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)', 
+                  color: isOnline ? 'black' : 'var(--text-muted)', 
+                  fontWeight: 600, 
+                  padding: '1rem', 
+                  borderRadius: '12px',
+                  border: isOnline ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                  cursor: isOnline ? 'pointer' : 'not-allowed'
+                }}
               >
-                {isLoading ? 'Processing...' : (isLogin ? 'Authorize Access' : 'Create Identity')}
+                {isLoading ? 'Processing...' : (!isOnline ? 'Network Unavailable' : (isLogin ? 'Authorize Access' : 'Create Identity'))}
               </button>
               
               <div style={{ textAlign: 'center', fontSize: '0.9rem' }}>

@@ -1,8 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
-  User, 
+  User,
   MenuIcon,
-  X
+  X,
+  WifiOff,
+  ShieldCheck,
+  ShieldAlert,
+  Scan,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -18,6 +23,7 @@ import { Weather } from './components/Weather';
 import { FaceAuth } from './components/FaceAuth';
 import { AuthModal } from './components/AuthModal';
 import { AppContainer } from './components/AppContainer';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 
 // --- Main App Component ---
 
@@ -30,6 +36,8 @@ function App() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
   const [activeApp, setActiveApp] = useState<string | null>(null);
+  const [authStatus, setAuthStatus] = useState<string>('Idle');
+  const isOnline = useOnlineStatus();
   const faceAuthRef = useRef<any>(null);
 
   const handleAuth = (userData: any, isNewLogin: boolean = false) => {
@@ -71,14 +79,14 @@ function App() {
       // Clear existing
       if (sleepTimeout) clearTimeout(sleepTimeout);
       if (terminationTimeout) clearTimeout(terminationTimeout);
-      
+
       // If modal is open or onboarding is active, don't set the sleep/logout timers
       if (isAuthModalOpen || showWelcome) return;
 
       // Stage 1: Sleep (Fade dashboard)
       if (hasInteracted) {
         sleepTimeout = setTimeout(() => {
-          setHasInteracted(false); 
+          setHasInteracted(false);
         }, STANDBY_DELAY);
       }
 
@@ -113,6 +121,24 @@ function App() {
     };
   }, [hasInteracted, isAuthModalOpen, showWelcome, user]);
 
+  const renderAuthIcon = () => {
+    if (!isOnline) return <WifiOff size={24} />;
+    
+    switch (authStatus) {
+      case 'Scanning...':
+        return <Scan size={24} className="status-icon-scanning" />;
+      case 'Authenticated':
+        return <ShieldCheck size={24} className="status-icon-success" />;
+      case 'Face not recognized':
+      case 'Camera Error':
+      case 'Backend unavailable':
+      case 'Max attempts reached. Please let screen turn off to retry.':
+        return <ShieldAlert size={24} className="status-icon-error" />;
+      default:
+        return <User size={24} />;
+    }
+  };
+
   return (
     <>
       <FluidBackground />
@@ -122,116 +148,115 @@ function App() {
         )}
       </AnimatePresence>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: hasInteracted || isAuthModalOpen ? 1 : 0 }}
         transition={{ duration: 1.5, ease: "easeOut" }}
         className="mirror-container"
       >
-      {/* Top Section */}
-      <div className="top-bar">
-        <div /> 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
-          <Clock />
-          <Weather isActive={hasInteracted || isAuthModalOpen} />
-        </div>
-      </div>
-
-      {/* Center Section: Face Recognition */}
-      <FaceAuth 
-        ref={faceAuthRef} 
-        onUserAuth={(u) => handleAuth(u, true)} 
-        hasInteracted={hasInteracted}
-        isLoggedIn={!!user}
-        isPaused={isAuthModalOpen}
-        onActivity={() => {
-          if (!hasInteracted) setHasInteracted(true);
-        }}
-      />
-
-      {/* Bottom Section */}
-      <div className="bottom-bar">
-        <div style={{ flex: 1 }} />
-        
-        {/* Launcher Trigger */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', zIndex: 3100, pointerEvents: 'auto' }}>
-          {user && (
-            <motion.button 
-              initial={{ opacity: 0, y: 50, scale: 0.8 }}
-              animate={{ 
-                opacity: 1, 
-                y: 0, 
-                scale: 1,
-                rotate: isLauncherOpen ? 90 : 0
-              }}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setIsLauncherOpen(!isLauncherOpen)}
-              className="glass-panel"
-              style={{ 
-                width: '56px',
-                height: '56px',
-                padding: 0,
-                borderRadius: '16px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                background: isLauncherOpen ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.08)',
-                border: `1px solid ${isLauncherOpen ? '#fff' : 'rgba(0, 242, 255, 0.4)'}`,
-                color: isLauncherOpen ? '#fff' : 'var(--accent-primary)',
-                boxShadow: isLauncherOpen ? '0 0 50px rgba(255,255,255,0.15)' : '0 0 40px rgba(0, 242, 255, 0.2)',
-                backdropFilter: 'blur(20px)',
-                transition: 'background 0.3s, border 0.3s, color 0.3s'
-              }}
-            >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={isLauncherOpen ? 'open' : 'closed'}
-                  initial={{ opacity: 0, rotate: -90 }}
-                  animate={{ opacity: 1, rotate: 0 }}
-                  exit={{ opacity: 0, rotate: 90 }}
-                  transition={{ duration: 0.2 }}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  {isLauncherOpen ? <X size={24} /> : <MenuIcon size={24} />}
-                </motion.div>
-              </AnimatePresence>
-            </motion.button>
-          )}
+        {/* Top Section */}
+        <div className="top-bar">
+          <div />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
+            <Clock />
+            <Weather isActive={hasInteracted || isAuthModalOpen} />
+          </div>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-          {!user && (
-            <button onClick={() => setIsAuthModalOpen(true)} className="glass-panel accent-border" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <User size={18} /> Login
-            </button>
-          )}
+        {/* Center Section: Face Recognition */}
+        <FaceAuth
+          ref={faceAuthRef}
+          onUserAuth={(u) => handleAuth(u, true)}
+          hasInteracted={hasInteracted}
+          isLoggedIn={!!user}
+          isPaused={isAuthModalOpen}
+          isOnline={isOnline}
+          onStatusChange={setAuthStatus}
+          onActivity={() => {
+            if (!hasInteracted) setHasInteracted(true);
+          }}
+        />
+
+        {/* Bottom Section */}
+        <div className="bottom-bar" style={{
+          position: 'fixed',
+          bottom: '2rem',
+          left: '0',
+          right: '0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 3100,
+          pointerEvents: 'none'
+        }}>
+          <div style={{ pointerEvents: 'auto' }}>
+            {user ? (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsLauncherOpen(!isLauncherOpen)}
+                className="glass-panel"
+                style={{ padding: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={isLauncherOpen ? 'open' : 'closed'}
+                    initial={{ opacity: 0, rotate: -90 }}
+                    animate={{ opacity: 1, rotate: 0 }}
+                    exit={{ opacity: 0, rotate: 90 }}
+                    transition={{ duration: 0.2 }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    {isLauncherOpen ? <X size={24} /> : <MenuIcon size={24} />}
+                  </motion.div>
+                </AnimatePresence>
+              </motion.button>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsAuthModalOpen(true)}
+                disabled={!isOnline}
+                className={`glass-panel accent-border ${!isOnline ? 'offline' : ''}`}
+                style={{ 
+                  padding: '1rem', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  opacity: isOnline ? 1 : 0.6,
+                  cursor: isOnline ? 'pointer' : 'not-allowed'
+                }}
+              >
+                {renderAuthIcon()}
+              </motion.button>
+            )}
+          </div>
         </div>
-      </div>
 
-      <AppLauncher 
-        isOpen={isLauncherOpen} 
-        onClose={() => setIsLauncherOpen(false)} 
-        user={user}
-        onLogout={handleLogout}
-        onSelectApp={(appName) => setActiveApp(appName)}
-      />
+        <AppLauncher
+          isOpen={isLauncherOpen}
+          onClose={() => setIsLauncherOpen(false)}
+          user={user}
+          onLogout={handleLogout}
+          onSelectApp={(appName) => setActiveApp(appName)}
+        />
 
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
-        onUserAuth={(u) => {
-          handleAuth(u, true);
-          setIsAuthModalOpen(false);
-        }}
-      />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          isOnline={isOnline}
+          onUserAuth={(u) => {
+            handleAuth(u, true);
+            setIsAuthModalOpen(false);
+          }}
+        />
 
-      <AppContainer 
-        activeApp={activeApp} 
-        onClose={() => setActiveApp(null)} 
-        user={user}
-        onLogout={handleLogout}
-      />
+        <AppContainer
+          activeApp={activeApp}
+          onClose={() => setActiveApp(null)}
+          user={user}
+          onLogout={handleLogout}
+        />
       </motion.div>
     </>
   );
