@@ -10,12 +10,8 @@ import {
   Wind
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CONFIG } from '../config';
 
-/**
- * Enterprise Weather Widget
- * Fetches real-time localized weather and displays 'Mirror Mirror' style HUD info.
- * Polished animation and condition-specific icon mapping.
- */
 export const Weather = memo(({ isActive }: { isActive: boolean }) => {
   const [weather, setWeather] = useState<any>(null);
 
@@ -29,20 +25,20 @@ export const Weather = memo(({ isActive }: { isActive: boolean }) => {
         );
         setWeather(response.data.current);
       } catch (err) {
-        console.error("Weather error:", err);
+        console.error(err);
       }
     };
 
     navigator.geolocation.getCurrentPosition(
       (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-      () => console.warn("Geolocation failed. Weather widget defaults to system fallback.")
+      () => {}
     );
 
     const interval = setInterval(() => {
       navigator.geolocation.getCurrentPosition(
         (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude)
       );
-    }, 600000);
+    }, CONFIG.WEATHER_REFRESH_INTERVAL);
 
     return () => clearInterval(interval);
   }, [isActive]);

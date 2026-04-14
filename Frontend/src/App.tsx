@@ -7,14 +7,12 @@ import {
   ShieldCheck,
   ShieldAlert,
   Scan,
-  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { auth } from './lib/firebase';
 import { onAuthStateChanged } from "firebase/auth";
 
-// Components
 import { FluidBackground } from './components/FluidBackground';
 import { WelcomeOverlay } from './components/WelcomeOverlay';
 import { AppLauncher } from './components/AppLauncher';
@@ -24,10 +22,7 @@ import { FaceAuth } from './components/FaceAuth';
 import { AuthModal } from './components/AuthModal';
 import { AppContainer } from './components/AppContainer';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
-
-// --- Main App Component ---
-
-const STANDBY_DELAY = 150000; // 15 seconds of total inactivity
+import { CONFIG } from './config';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -51,8 +46,8 @@ function App() {
     auth.signOut();
     setUser(null);
     setHasInteracted(false);
-    setIsLauncherOpen(false); // Ensure launcher is closed on logout
-    setActiveApp(null); // Clear active app on logout
+    setIsLauncherOpen(false);
+    setActiveApp(null);
   };
 
   useEffect(() => {
@@ -62,7 +57,7 @@ function App() {
           uid: firebaseUser.uid,
           name: firebaseUser.displayName || 'Authorized User',
           email: firebaseUser.email,
-        }, false); // Restoration: don't show welcome
+        }, false);
         setHasInteracted(true);
       } else {
         setUser(null);
@@ -76,22 +71,18 @@ function App() {
     let terminationTimeout: any;
 
     const resetTimers = () => {
-      // Clear existing
       if (sleepTimeout) clearTimeout(sleepTimeout);
       if (terminationTimeout) clearTimeout(terminationTimeout);
 
-      // If modal is open or onboarding is active, don't set the sleep/logout timers
       if (isAuthModalOpen || showWelcome) return;
 
-      // Stage 1: Sleep (Fade dashboard)
       if (hasInteracted) {
         sleepTimeout = setTimeout(() => {
           setHasInteracted(false);
-        }, STANDBY_DELAY);
+        }, CONFIG.STANDBY_DELAY);
       }
 
-      // Stage 2: Termination (Full Logout - 1s after sleep or full delay if active)
-      const logoutDelay = hasInteracted ? STANDBY_DELAY + 1000 : 1000;
+      const logoutDelay = hasInteracted ? CONFIG.STANDBY_DELAY + CONFIG.TERMINATION_DELAY : CONFIG.TERMINATION_DELAY;
       terminationTimeout = setTimeout(() => {
         if (user) handleLogout();
       }, logoutDelay);
@@ -102,14 +93,11 @@ function App() {
       resetTimers();
     };
 
-    // Global Activity Listeners
     const activityEvents = ['click', 'mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
     activityEvents.forEach(event => {
       window.addEventListener(event, handleInteraction);
     });
 
-
-    // Initial timer start - Always run if we have a user or interaction
     if (hasInteracted || isAuthModalOpen || user) resetTimers();
 
     return () => {
@@ -154,7 +142,6 @@ function App() {
         transition={{ duration: 1.5, ease: "easeOut" }}
         className="mirror-container"
       >
-        {/* Top Section */}
         <div className="top-bar">
           <div />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
@@ -163,7 +150,6 @@ function App() {
           </div>
         </div>
 
-        {/* Center Section: Face Recognition */}
         <FaceAuth
           ref={faceAuthRef}
           onUserAuth={(u) => handleAuth(u, true)}
@@ -177,7 +163,6 @@ function App() {
           }}
         />
 
-        {/* Bottom Section */}
         <div className="bottom-bar" style={{
           position: 'fixed',
           bottom: '2rem',
