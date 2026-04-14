@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import axios from 'axios';
-import { WifiOff, ShieldAlert, Scan } from 'lucide-react';
 import { API_BASE_URL, exchangeToken } from '../lib/api';
+import { CONFIG } from '../config';
 
 export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity, isPaused, isOnline, onStatusChange }: { 
   onUserAuth: (user: any) => void, 
@@ -17,10 +17,12 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
   const streamRef = useRef<MediaStream | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [status, setStatusInternal] = useState('Idle');
+  
   const setStatus = (newStatus: string) => {
     setStatusInternal(newStatus);
     if (onStatusChange) onStatusChange(newStatus);
   };
+  
   const [isCameraEnabled, setIsCameraEnabled] = useState(false);
 
   useImperativeHandle(ref, () => ({
@@ -51,12 +53,12 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
 
       if (!isPaused) {
         startCamera();
-        intervalRef.current = setInterval(captureAndAuth, 5000);
+        intervalRef.current = setInterval(captureAndAuth, CONFIG.FACE_SCAN_INTERVAL);
       } else {
         setStatus('Registration Preview Active');
       }
     } else {
-      failCountRef.current = 0; // Reset failures when screen goes off
+      failCountRef.current = 0;
       stopCamera();
       setStatus('Idle');
     }
@@ -84,7 +86,7 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
       streamRef.current = stream;
       setIsCameraEnabled(true);
     } catch (err) {
-      console.error("Error accessing camera:", err);
+      console.error(err);
       setStatus('Camera Error');
       setIsCameraEnabled(false);
     }
@@ -104,16 +106,15 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
   const captureAndAuth = async () => {
     if (!videoRef.current || !canvasRef.current || isScanning) return;
 
-    if (failCountRef.current >= 5) {
+    if (failCountRef.current >= CONFIG.MAX_FACE_SCAN_FAIL_COUNT) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      stopCamera(); // Shut down camera to allow mirror to sleep
+      stopCamera();
       return;
     }
 
-    // Call onActivity to prevent sleep during scanning
     if (onActivity) onActivity();
 
     setIsScanning(true);
@@ -143,7 +144,6 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
             }
           } catch (err: any) {
             if (!err.response) {
-              // Network error / backend unreachable — stop scanning
               if (intervalRef.current) {
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
@@ -163,7 +163,7 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
 
   const handleFailure = (msg: string) => {
     failCountRef.current += 1;
-    if (failCountRef.current >= 5) {
+    if (failCountRef.current >= CONFIG.MAX_FACE_SCAN_FAIL_COUNT) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;

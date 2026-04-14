@@ -32,7 +32,7 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth, isOnline }: {
           videoRef.current.srcObject = currentStream;
         }
       } catch (err) {
-        console.error("Registration camera error:", err);
+        console.error(err);
         setError("Could not access camera for face registration.");
       }
     };
