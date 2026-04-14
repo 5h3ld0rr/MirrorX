@@ -1,54 +1,476 @@
-import { useState, useEffect } from 'react';
-import { Clock as ClockIcon, Globe, AlarmClock, Timer } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { 
+  Clock as ClockIcon, 
+  Globe, 
+  AlarmClock, 
+  Timer, 
+  Plus, 
+  Trash2, 
+  Search, 
+  Play, 
+  Pause, 
+  RotateCcw, 
+  Bell, 
+  BellOff,
+  ChevronUp,
+  ChevronDown
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+interface WorldClock {
+  id: string;
+  city: string;
+  country: string;
+  timezone: string;
+}
+
+interface Alarm {
+  id: string;
+  time: string;
+  label: string;
+  active: boolean;
+  days: string[];
+}
 
 export const ClockApp = () => {
   const [time, setTime] = useState(new Date());
+  const [activeTab, setActiveTab] = useState<'clock' | 'world' | 'alarm' | 'timer'>('clock');
+  
+  // World Clock State
+  const [worldClocks, setWorldClocks] = useState<WorldClock[]>([
+    { id: '1', city: 'London', country: 'UK', timezone: 'Europe/London' },
+    { id: '2', city: 'New York', country: 'USA', timezone: 'America/New_York' },
+    { id: '3', city: 'Tokyo', country: 'Japan', timezone: 'Asia/Tokyo' },
+    { id: '4', city: 'Dubai', country: 'UAE', timezone: 'Asia/Dubai' },
+  ]);
+  const [isAddCityOpen, setIsAddCityOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Alarm State
+  const [alarms, setAlarms] = useState<Alarm[]>([
+    { id: '1', time: '07:00 AM', label: 'Morning', active: true, days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] },
+    { id: '2', time: '09:30 AM', label: 'Meeting', active: false, days: ['Mon', 'Wed', 'Fri'] },
+  ]);
+
+  // Timer State
+  const [timerInput, setTimerInput] = useState({ h: 0, m: 10, s: 0 });
+  const [timerRemaining, setTimerRemaining] = useState(600); // 10 mins in seconds
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [totalTimerTime, setTotalTimerTime] = useState(600);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
+  // Timer Logic
+  useEffect(() => {
+    if (isTimerRunning && timerRemaining > 0) {
+      timerIntervalRef.current = setInterval(() => {
+        setTimerRemaining(prev => prev - 1);
+      }, 1000);
+    } else {
+      if (timerRemaining === 0) setIsTimerRunning(false);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    }
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, [isTimerRunning, timerRemaining]);
+
+  const formatTime = (date: Date, timezone?: string) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: activeTab === 'clock' ? '2-digit' : undefined,
+      hour12: true,
+      timeZone: timezone
+    });
+  };
+
+  const getOffset = (timezone: string) => {
+    const now = new Date();
+    const local = now.getTime();
+    const target = new Date(now.toLocaleString('en-US', { timeZone: timezone })).getTime();
+    const diff = (target - local) / (1000 * 60 * 60);
+    const sign = diff >= 0 ? '+' : '';
+    return `${sign}${diff.toFixed(1).replace('.0', '')}h`;
+  };
+
+  // World Clock Helpers
+  const cityOptions = [
+    { city: 'Colombo', country: 'Sri Lanka', timezone: 'Asia/Colombo' },
+    { city: 'Singapore', country: 'Singapore', timezone: 'Asia/Singapore' },
+    { city: 'Paris', country: 'France', timezone: 'Europe/Paris' },
+    { city: 'Sydney', country: 'Australia', timezone: 'Australia/Sydney' },
+    { city: 'Moscow', country: 'Russia', timezone: 'Europe/Moscow' },
+    { city: 'California', country: 'USA', timezone: 'America/Los_Angeles' },
+    { city: 'Berlin', country: 'Germany', timezone: 'Europe/Berlin' },
+    { city: 'Hong Kong', country: 'China', timezone: 'Asia/Hong_Kong' },
+  ];
+
+  const filteredCities = cityOptions.filter(city => 
+    city.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    city.country.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const addCity = (city: typeof cityOptions[0]) => {
+    if (!worldClocks.find(c => c.city === city.city)) {
+      setWorldClocks([...worldClocks, { ...city, id: Date.now().toString() }]);
+    }
+    setIsAddCityOpen(false);
+    setSearchQuery('');
+  };
+
+  const removeCity = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setWorldClocks(worldClocks.filter(c => c.id !== id));
+  };
+
+  // Timer Helpers
+  const startTimer = () => {
+    const total = timerInput.h * 3600 + timerInput.m * 60 + timerInput.s;
+    if (total > 0) {
+      setTimerRemaining(total);
+      setTotalTimerTime(total);
+      setIsTimerRunning(true);
+    }
+  };
+
+  const resetTimer = () => {
+    setIsTimerRunning(false);
+    setTimerRemaining(timerInput.h * 3600 + timerInput.m * 60 + timerInput.s);
+  };
+
+  const formatTimerDisplay = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h > 0 ? h.toString().padStart(2, '0') + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const timerProgress = totalTimerTime > 0 ? (timerRemaining / totalTimerTime) * 100 : 0;
+
+  const tabs = [
+    { id: 'clock', icon: ClockIcon, label: 'Clock' },
+    { id: 'world', icon: Globe, label: 'World' },
+    { id: 'alarm', icon: AlarmClock, label: 'Alarm' },
+    { id: 'timer', icon: Timer, label: 'Timer' },
+  ] as const;
+
   return (
-    <div className="app-content" style={{ padding: '2rem', textAlign: 'center' }}>
-      <div style={{ display: 'flex', gap: '2rem', marginBottom: '3rem', justifyContent: 'center' }}>
-        <button className="glass-panel" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0, 242, 255, 0.1)', borderColor: 'var(--accent-primary)' }}>
-          <ClockIcon size={20} /> Clock
-        </button>
-        <button className="glass-panel" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Globe size={20} /> World
-        </button>
-        <button className="glass-panel" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <AlarmClock size={20} /> Alarm
-        </button>
-        <button className="glass-panel" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Timer size={20} /> Timer
-        </button>
+    <div className="app-content" style={{ padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Navigation Tabs */}
+      <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '3rem', justifyContent: 'center' }}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            className={`glass-panel ${activeTab === tab.id ? 'accent-border' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '1rem 1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              background: activeTab === tab.id ? 'rgba(0, 242, 255, 0.1)' : 'var(--bg-glass)',
+              borderColor: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--border-light)',
+              minWidth: '120px',
+              justifyContent: 'center'
+            }}
+          >
+            <tab.icon size={20} color={activeTab === tab.id ? 'var(--accent-primary)' : 'currentColor'} />
+            <span style={{ color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+              {tab.label}
+            </span>
+          </button>
+        ))}
       </div>
 
-      <div style={{ marginBottom: '4rem' }}>
-        <div style={{ fontSize: '8rem', fontWeight: 300, lineHeight: 1 }}>
-          {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-        </div>
-        <div style={{ fontSize: '1.5rem', color: 'var(--text-secondary)', marginTop: '1rem', textTransform: 'uppercase', letterSpacing: '0.5em' }}>
-          {time.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
-        </div>
+      {/* App Content */}
+      <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+        <AnimatePresence mode="wait">
+          {activeTab === 'clock' && (
+            <motion.div
+              key="clock-view"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              style={{ textAlign: 'center', marginTop: '2rem' }}
+            >
+              <div style={{ fontSize: '10rem', fontWeight: 200, lineHeight: 1, fontFamily: 'var(--font-mono)', letterSpacing: '-0.05em' }}>
+                {formatTime(time)}
+              </div>
+              <div style={{ fontSize: '2rem', color: 'var(--text-secondary)', marginTop: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.4em', fontWeight: 300 }}>
+                {time.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2rem', marginTop: '5rem', maxWidth: '900px', margin: '5rem auto 0' }}>
+                <div className="glass-panel" style={{ padding: '2rem', textAlign: 'left', borderLeft: '4px solid var(--accent-primary)' }}>
+                  <h3 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Next Alarm</h3>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 500 }}>07:00 AM</div>
+                  <div style={{ color: 'var(--accent-primary)', fontSize: '0.9rem', marginTop: '0.5rem' }}>Every Weekday</div>
+                </div>
+                <div className="glass-panel" style={{ padding: '2rem', textAlign: 'left', borderLeft: '4px solid var(--text-muted)' }}>
+                  <h3 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Sunrise</h3>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 500 }}>05:54 AM</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem' }}>Clear Skies</div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'world' && (
+            <motion.div
+              key="world-view"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              style={{ padding: '0 2rem' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <h2 style={{ fontSize: '2rem', fontWeight: 300 }}>World Clock</h2>
+                <button 
+                  className="glass-panel" 
+                  onClick={() => setIsAddCityOpen(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem' }}
+                >
+                  <Plus size={18} /> Add City
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                {worldClocks.map((clock) => (
+                  <motion.div
+                    key={clock.id}
+                    layout
+                    whileHover={{ scale: 1.02 }}
+                    className="glass-panel"
+                    style={{ padding: '1.5rem', position: 'relative', overflow: 'hidden' }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                          {clock.country}
+                        </div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 500, margin: '0.25rem 0' }}>{clock.city}</div>
+                        <div style={{ color: 'var(--accent-primary)', fontSize: '0.8rem' }}>
+                          {getOffset(clock.timezone)} Relative to Local
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 400, fontFamily: 'var(--font-mono)' }}>
+                          {formatTime(time, clock.timezone)}
+                        </div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                          {new Date(time.toLocaleString('en-US', { timeZone: clock.timezone })).toLocaleDateString([], { weekday: 'short' })}
+                          <button 
+                            onClick={(e) => removeCity(clock.id, e)}
+                            style={{ padding: '0.2rem', background: 'transparent', border: 'none', color: 'var(--text-muted)' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'alarm' && (
+            <motion.div
+              key="alarm-view"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              style={{ padding: '0 2rem' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <h2 style={{ fontSize: '2rem', fontWeight: 300 }}>Alarms</h2>
+                <button className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem' }}>
+                  <Plus size={18} /> New Alarm
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                {alarms.map(alarm => (
+                  <div key={alarm.id} className="glass-panel" style={{ padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: alarm.active ? 1 : 0.6, transition: 'opacity 0.3s' }}>
+                    <div>
+                      <div style={{ fontSize: '3rem', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>{alarm.time}</div>
+                      <div style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>{alarm.label} • {alarm.days.join(', ')}</div>
+                    </div>
+                    <button 
+                      onClick={() => setAlarms(alarms.map(a => a.id === alarm.id ? { ...a, active: !a.active } : a))}
+                      style={{ 
+                        width: '60px', 
+                        height: '32px', 
+                        borderRadius: '16px', 
+                        background: alarm.active ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)',
+                        position: 'relative',
+                        padding: '0',
+                        border: 'none',
+                        transition: 'background 0.3s'
+                      }}
+                    >
+                      <motion.div 
+                        animate={{ x: alarm.active ? 28 : 4 }}
+                        style={{ width: '24px', height: '24px', background: 'white', borderRadius: '50%', position: 'absolute', top: '4px' }}
+                      />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'timer' && (
+            <motion.div
+              key="timer-view"
+              initial={{ opacity: 0, scale: 1.1 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', paddingBottom: '2rem' }}
+            >
+              <div style={{ position: 'relative', width: '400px', height: '400px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <svg width="400" height="400" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="200" cy="200" r="190" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                  <motion.circle 
+                    cx="200" cy="200" r="190" fill="none" stroke="var(--accent-primary)" strokeWidth="8" 
+                    strokeLinecap="round" strokeDasharray="1194"
+                    animate={{ strokeDashoffset: 1194 - (1194 * timerProgress) / 100 }}
+                    transition={{ duration: 1, ease: "linear" }}
+                  />
+                </svg>
+                <div style={{ position: 'absolute', textAlign: 'center' }}>
+                  <div style={{ fontSize: '6rem', fontWeight: 200, fontFamily: 'var(--font-mono)' }}>
+                    {formatTimerDisplay(timerRemaining)}
+                  </div>
+                </div>
+              </div>
+
+              {!isTimerRunning && timerRemaining === totalTimerTime && (
+                <div style={{ display: 'flex', gap: '2rem', marginTop: '3rem' }}>
+                  {['h', 'm', 's'].map(unit => (
+                    <div key={unit} style={{ textAlign: 'center' }}>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '1rem' }}>{unit === 'h' ? 'Hours' : unit === 'm' ? 'Minutes' : 'Seconds'}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                        <button onClick={() => setTimerInput(prev => ({ ...prev, [unit]: Math.min(prev[unit as keyof typeof prev] + 1, 59) }))} style={{ padding: '0.5rem', background: 'transparent', border: 'none' }}><ChevronUp size={24}/></button>
+                        <div style={{ fontSize: '3rem', fontWeight: 300, width: '60px' }}>{timerInput[unit as keyof typeof timerInput].toString().padStart(2, '0')}</div>
+                        <button onClick={() => setTimerInput(prev => ({ ...prev, [unit]: Math.max(prev[unit as keyof typeof prev] - 1, 0) }))} style={{ padding: '0.5rem', background: 'transparent', border: 'none' }}><ChevronDown size={24}/></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '2rem', marginTop: '4rem' }}>
+                <button 
+                  onClick={() => setIsTimerRunning(!isTimerRunning)} 
+                  className="glass-panel"
+                  style={{ 
+                    padding: '1.5rem 3rem', 
+                    borderRadius: '50px', 
+                    background: isTimerRunning ? 'rgba(255,255,255,0.1)' : 'rgba(0,242,255,0.2)',
+                    borderColor: isTimerRunning ? 'transparent' : 'var(--accent-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    fontSize: '1.2rem'
+                  }}
+                >
+                  {isTimerRunning ? <><Pause size={24} /> Pause</> : <><Play size={24} /> {timerRemaining < totalTimerTime ? 'Resume' : 'Start'}</>}
+                </button>
+                <button 
+                  onClick={resetTimer} 
+                  className="glass-panel"
+                  style={{ padding: '1.5rem', borderRadius: '50%' }}
+                >
+                  <RotateCcw size={24} />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2rem' }}>
-        <div className="glass-panel" style={{ padding: '2rem' }}>
-          <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Next Alarm</h3>
-          <div style={{ fontSize: '2rem', fontWeight: 600 }}>07:00 AM</div>
-          <div style={{ color: 'var(--accent-primary)', fontSize: '0.8rem' }}>Every Weekday</div>
-        </div>
-        <div className="glass-panel" style={{ padding: '2rem' }}>
-          <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>London, UK</h3>
-          <div style={{ fontSize: '2rem', fontWeight: 600 }}>
-            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })}
-          </div>
-          <div style={{ color: 'var(--accent-primary)', fontSize: '0.8rem' }}>-5:30 Hours</div>
-        </div>
-      </div>
+      {/* Add City Modal */}
+      <AnimatePresence>
+        {isAddCityOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.8)',
+              backdropFilter: 'blur(10px)',
+              zIndex: 1000,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: '2rem'
+            }}
+            onClick={() => setIsAddCityOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="glass-panel accent-border"
+              style={{ width: '100%', maxWidth: '500px', padding: '2rem' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', fontWeight: 400 }}>Add City</h2>
+              
+              <div className="input-group" style={{ position: 'relative' }}>
+                <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input 
+                  type="text" 
+                  placeholder="Search city or country..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ paddingLeft: '3rem' }}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ maxHeight: '300px', overflow: 'auto', marginTop: '1rem' }}>
+                {filteredCities.length > 0 ? (
+                  filteredCities.map(city => (
+                    <div 
+                      key={city.city}
+                      onClick={() => addCity(city)}
+                      style={{ 
+                        padding: '1rem', 
+                        borderRadius: '10px', 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{city.city}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{city.country}</div>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--accent-primary)' }}>{getOffset(city.timezone)}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                    No cities found
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
