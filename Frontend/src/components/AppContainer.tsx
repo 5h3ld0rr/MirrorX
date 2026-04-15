@@ -35,16 +35,15 @@ export const AppContainer = ({ activeApp, onClose, user, onLogout }: AppContaine
     }
   };
 
-  if (!activeApp) return null;
-
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, scale: 1.1, filter: 'blur(20px)' }}
-        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, scale: 1.1, filter: 'blur(20px)' }}
-        transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-        style={{
+      {activeApp && (
+        <motion.div
+          initial={{ opacity: 0, scale: 1.1, filter: 'blur(20px)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, scale: 1.1, filter: 'blur(20px)' }}
+          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+          style={{
           position: 'fixed',
           inset: 0,
           zIndex: 4000,
@@ -104,6 +103,7 @@ export const AppContainer = ({ activeApp, onClose, user, onLogout }: AppContaine
           {renderApp()}
         </div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 };

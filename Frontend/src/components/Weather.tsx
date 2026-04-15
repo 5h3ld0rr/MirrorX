@@ -31,7 +31,7 @@ export const Weather = memo(({ isActive }: { isActive: boolean }) => {
 
     navigator.geolocation.getCurrentPosition(
       (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-      () => {}
+      () => { }
     );
 
     const interval = setInterval(() => {

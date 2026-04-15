@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   Cloud,
   Clock1,
   LogOut,
@@ -12,10 +12,10 @@ import {
   FileText
 } from 'lucide-react';
 
-export const AppLauncher = ({ isOpen, onClose, user, onLogout, onSelectApp }: { 
-  isOpen: boolean, 
-  onClose: () => void, 
-  user: any, 
+export const AppLauncher = ({ isOpen, onClose, user, onLogout, onSelectApp }: {
+  isOpen: boolean,
+  onClose: () => void,
+  user: any,
   onLogout: () => void,
   onSelectApp: (name: string) => void
 }) => {
@@ -34,13 +34,16 @@ export const AppLauncher = ({ isOpen, onClose, user, onLogout, onSelectApp }: {
   return (
     <AnimatePresence>
       {(isOpen && user) && (
-        <div 
+        <motion.div
           key="launcher-overlay"
-          className="auth-overlay" 
-          onClick={onClose} 
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="auth-overlay"
+          onClick={onClose}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
             position: 'fixed',
             inset: 0,
@@ -49,7 +52,7 @@ export const AppLauncher = ({ isOpen, onClose, user, onLogout, onSelectApp }: {
             backdropFilter: 'blur(20px)'
           }}
         >
-          <motion.div 
+          <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 50 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 50 }}
@@ -66,97 +69,97 @@ export const AppLauncher = ({ isOpen, onClose, user, onLogout, onSelectApp }: {
               backdropFilter: 'blur(40px)'
             }}
           >
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(4, 1fr)', 
-          gap: '2rem',
-          textAlign: 'center'
-        }}>
-          {apps.map((app, i) => (
-            <motion.div
-              key={app.name}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              whileHover={{ scale: 1.1, y: -5 }}
-              className="app-item"
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                onSelectApp(app.name);
-                onClose();
-              }}
-            >
-              <div style={{ 
-                width: '60px', 
-                height: '60px', 
-                margin: '0 auto 0.8rem',
-                borderRadius: '16px',
-                background: `linear-gradient(135deg, ${app.color}15, ${app.color}35)`,
-                border: `1px solid ${app.color}50`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: app.color,
-                boxShadow: `0 8px 16px ${app.color}08`
-              }}>
-                {app.icon}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>{app.name}</div>
-            </motion.div>
-          ))}
-        </div>
-
-        <div style={{ 
-          marginTop: '3rem', 
-          paddingTop: '2rem', 
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ 
-              width: '40px', 
-              height: '40px', 
-              borderRadius: '50%', 
-              background: 'linear-gradient(135deg, var(--accent-primary), #0090ff)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'black',
-              fontWeight: 700
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: '2rem',
+              textAlign: 'center'
             }}>
-              {user.name?.[0].toUpperCase() || 'U'}
+              {apps.map((app, i) => (
+                <motion.div
+                  key={app.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  whileHover={{ scale: 1.1, y: -5 }}
+                  className="app-item"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => {
+                    onSelectApp(app.name);
+                    onClose();
+                  }}
+                >
+                  <div style={{
+                    width: '60px',
+                    height: '60px',
+                    margin: '0 auto 0.8rem',
+                    borderRadius: '16px',
+                    background: `linear-gradient(135deg, ${app.color}15, ${app.color}35)`,
+                    border: `1px solid ${app.color}50`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: app.color,
+                    boxShadow: `0 8px 16px ${app.color}08`
+                  }}>
+                    {app.icon}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>{app.name}</div>
+                </motion.div>
+              ))}
             </div>
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '1rem', color: 'white', fontWeight: 600 }}>{user.name}</div>
-            </div>
-          </div>
-          
-          <button 
-            onClick={() => {
-              onLogout();
-              onClose();
-            }} 
-            className="glass-panel"
-            style={{ 
-              padding: '0.6rem 1.2rem', 
-              borderRadius: '12px',
-              background: 'rgba(255, 61, 61, 0.1)',
-              border: '1px solid rgba(255, 61, 61, 0.2)',
-              color: '#ff4d4d',
-              fontSize: '0.85rem',
-              fontWeight: 600,
+
+            <div style={{
+              marginTop: '3rem',
+              paddingTop: '2rem',
+              borderTop: '1px solid rgba(255,255,255,0.08)',
               display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            <LogOut size={16} /> Sign Out
-          </button>
-        </div>
-      </motion.div>
-    </div>
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--accent-primary), #0090ff)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'black',
+                  fontWeight: 700
+                }}>
+                  {user.name?.[0].toUpperCase() || 'U'}
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: '1rem', color: 'white', fontWeight: 600 }}>{user.name}</div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  onLogout();
+                  onClose();
+                }}
+                className="glass-panel"
+                style={{
+                  padding: '0.6rem 1.2rem',
+                  borderRadius: '12px',
+                  background: 'rgba(255, 61, 61, 0.1)',
+                  border: '1px solid rgba(255, 61, 61, 0.2)',
+                  color: '#ff4d4d',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <LogOut size={16} /> Sign Out
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

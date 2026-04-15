@@ -3,8 +3,8 @@ import axios from 'axios';
 import { API_BASE_URL, exchangeToken } from '../lib/api';
 import { CONFIG } from '../config';
 
-export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity, isPaused, isOnline, onStatusChange }: { 
-  onUserAuth: (user: any) => void, 
+export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onActivity, isPaused, isOnline, onStatusChange }: {
+  onUserAuth: (user: any) => void,
   hasInteracted: boolean,
   isLoggedIn: boolean,
   onActivity?: () => void,
@@ -17,12 +17,12 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
   const streamRef = useRef<MediaStream | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [status, setStatusInternal] = useState('Idle');
-  
+
   const setStatus = (newStatus: string) => {
     setStatusInternal(newStatus);
     if (onStatusChange) onStatusChange(newStatus);
   };
-  
+
   const [isCameraEnabled, setIsCameraEnabled] = useState(false);
 
   useImperativeHandle(ref, () => ({
@@ -81,7 +81,7 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
         setIsCameraEnabled(true);
         return;
       }
-      
+
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       streamRef.current = stream;
       setIsCameraEnabled(true);
@@ -187,16 +187,16 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
         </div>
       )}
       {status !== 'Idle' && (
-        <div style={{ 
-          position: 'absolute', 
-          bottom: '-3rem', 
+        <div style={{
+          position: 'absolute',
+          bottom: '-3rem',
           textAlign: 'center',
           width: '100%'
         }}>
-          <div 
-            className="glitch-text" 
-            style={{ 
-              fontSize: '0.8rem', 
+          <div
+            className="glitch-text"
+            style={{
+              fontSize: '0.8rem',
               color: (status.includes('closer') || status.includes('far')) ? '#ff4d4d' : (isScanning ? 'var(--accent-primary)' : 'var(--text-muted)'),
               fontWeight: '400',
               textTransform: 'uppercase',

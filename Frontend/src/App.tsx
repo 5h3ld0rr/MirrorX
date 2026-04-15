@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { 
+import {
   User,
   MenuIcon,
   X,
@@ -111,7 +111,7 @@ function App() {
 
   const renderAuthIcon = () => {
     if (!isOnline) return <WifiOff size={24} />;
-    
+
     switch (authStatus) {
       case 'Scanning...':
         return <Scan size={24} className="status-icon-scanning" />;
@@ -203,10 +203,10 @@ function App() {
                 onClick={() => setIsAuthModalOpen(true)}
                 disabled={!isOnline}
                 className={`glass-panel accent-border ${!isOnline ? 'offline' : ''}`}
-                style={{ 
-                  padding: '1rem', 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                style={{
+                  padding: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   opacity: isOnline ? 1 : 0.6,
                   cursor: isOnline ? 'pointer' : 'not-allowed'
