@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { auth, db, admin } from "../config/firebase";
-import * as faceService from "../services/faceService";
+import { auth, db, admin } from "../config/firebase.js";
+import * as faceService from "../services/faceService.js";
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -8,7 +8,7 @@ export const register = async (req: Request, res: Response) => {
     const photoBuffer = (req as any).file?.buffer;
 
     if (!name || !email || !photoBuffer) {
-        return res.status(400).json({ error: "Missing required fields: name, email, photo" });
+      return res.status(400).json({ error: "Missing required fields: name, email, photo" });
     }
 
     // Biometric analysis
@@ -50,15 +50,15 @@ export const register = async (req: Request, res: Response) => {
 
     const customToken = await auth.createCustomToken(userRecord.uid);
 
-    res.status(201).json({ 
-        message: "✅ Face registration successful.", 
-        userId: userRecord.uid,
-        token: customToken,
-        user: {
-          uid: userRecord.uid,
-          name: name,
-          email: email
-        }
+    res.status(201).json({
+      message: "✅ Face registration successful.",
+      userId: userRecord.uid,
+      token: customToken,
+      user: {
+        uid: userRecord.uid,
+        name: name,
+        email: email
+      }
     });
 
   } catch (error: any) {
@@ -72,7 +72,7 @@ export const login = async (req: Request, res: Response) => {
     const photoBuffer = (req as any).file?.buffer;
 
     if (!photoBuffer) {
-        return res.status(400).json({ error: "No image provided." });
+      return res.status(400).json({ error: "No image provided." });
     }
 
     const analysis = await faceService.analyzeFace(photoBuffer);
@@ -95,7 +95,7 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const customToken = await auth.createCustomToken(matchedUser.id);
-    
+
     res.json({
       success: true,
       token: customToken,

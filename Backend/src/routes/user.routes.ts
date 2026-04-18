@@ -1,13 +1,13 @@
 import { Router, Request, Response } from "express";
-import { db } from "../config/firebase";
-import { verifyToken } from "../middleware/auth.middleware";
+import { db } from "../config/firebase.js";
+import { verifyToken } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
 router.get("/", verifyToken as any, async (req: Request, res: Response) => {
   try {
     const snapshot = await db.collection("users").get();
-    const users = snapshot.docs.map((doc) => ({
+    const users = snapshot.docs.map((doc: any) => ({
       id: doc.id,
       uid: doc.id,
       name: doc.data().name || doc.data().username,
