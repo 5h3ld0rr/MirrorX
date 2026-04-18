@@ -7,6 +7,18 @@ export const exchangeToken = async (customToken: string) => {
   const userCred = await signInWithCustomToken(auth, customToken);
   return await userCred.user.getIdToken();
 };
+
+export const getUserProfile = async () => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/users/profile`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  if (!response.ok) throw new Error('Failed to fetch profile');
+  return await response.json();
+};
 export const updateProfile = async (data: { name?: string, bio?: string }) => {
   const token = await auth.currentUser?.getIdToken();
   if (!token) throw new Error("No authenticated user");

@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { auth } from './lib/firebase';
 import { onAuthStateChanged } from "firebase/auth";
+import { getUserProfile } from './lib/api';
 
 import { FluidBackground } from './components/FluidBackground';
 import { WelcomeOverlay } from './components/WelcomeOverlay';
@@ -51,13 +52,20 @@ function App() {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        handleAuth({
-          uid: firebaseUser.uid,
-          name: firebaseUser.displayName || 'Authorized User',
-          email: firebaseUser.email,
-        }, false);
+        try {
+          // Fetch enriched profile from Firestore via Backend
+          const profile = await getUserProfile();
+          handleAuth(profile, false);
+        } catch (error) {
+          // Fallback to basic Firebase info if profile fetch fails
+          handleAuth({
+            uid: firebaseUser.uid,
+            name: firebaseUser.displayName || 'Authorized User',
+            email: firebaseUser.email,
+          }, false);
+        }
         setHasInteracted(true);
       } else {
         setUser(null);
@@ -143,7 +151,33 @@ function App() {
         className="mirror-container"
       >
         <div className="top-bar">
-          <div />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ 
+              width: '32px', 
+              height: '32px', 
+              borderRadius: '50%', 
+              background: user?.photoURL ? `url(${user.photoURL})` : 'linear-gradient(135deg, var(--accent-primary), #0088ff)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'black',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              border: '1px solid rgba(255,255,255,0.1)',
+              overflow: 'hidden'
+            }}>
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                user?.name?.[0].toUpperCase() || 'U'
+              )}
+            </div>
+            <span style={{ fontSize: '1rem', color: 'white', fontWeight: 500, letterSpacing: '0.05em' }}>
+              {user?.name?.toLowerCase() || 'mirrorx'}
+            </span>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
             <Clock />
             <Weather isActive={hasInteracted || isAuthModalOpen} />

@@ -119,17 +119,25 @@ export const AppLauncher = ({ isOpen, onClose, user, onLogout, onSelectApp }: {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{
-                  width: '40px',
-                  height: '40px',
+                  width: '44px',
+                  height: '44px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--accent-primary), #0090ff)',
+                  background: user.photoURL ? `url(${user.photoURL})` : 'linear-gradient(135deg, var(--accent-primary), #0090ff)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: 'black',
-                  fontWeight: 700
+                  fontWeight: 700,
+                  overflow: 'hidden',
+                  border: '1px solid rgba(255,255,255,0.1)'
                 }}>
-                  {user.name?.[0].toUpperCase() || 'U'}
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    user.name?.[0].toUpperCase() || 'U'
+                  )}
                 </div>
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ fontSize: '1rem', color: 'white', fontWeight: 600 }}>{user.name}</div>

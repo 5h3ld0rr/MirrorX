@@ -7,6 +7,22 @@ import sharp from "sharp";
 const router = Router();
 const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB limit for intake
 
+router.get("/profile", verifyToken as any, async (req: Request, res: Response) => {
+  try {
+    const uid = (req as any).user.uid;
+    const userDoc = await db.collection("users").doc(uid).get();
+    
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ uid, ...userDoc.data() });
+  } catch (error: any) {
+    console.error("❌ Error fetching profile:", error.message);
+    res.status(500).json({ error: "Failed to fetch profile" });
+  }
+});
+
 router.get("/", verifyToken as any, async (req: Request, res: Response) => {
   try {
     const snapshot = await db.collection("users").get();
