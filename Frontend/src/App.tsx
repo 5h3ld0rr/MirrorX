@@ -23,6 +23,8 @@ import { AuthModal } from './components/AuthModal';
 import { AppContainer } from './components/AppContainer';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { CONFIG } from './config';
+import { GlobalPlayer } from './components/GlobalPlayer';
+import { MusicWidget } from './components/MusicWidget';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -142,6 +144,9 @@ function App() {
         transition={{ duration: 1.5, ease: "easeOut" }}
         className="mirror-container"
       >
+        <GlobalPlayer />
+        <MusicWidget isIdle={!hasInteracted && !isAuthModalOpen && !showWelcome} />
+        <div className="top-bar" style={{ justifyContent: 'flex-end' }}>
         <div className="top-bar">
           <div />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>

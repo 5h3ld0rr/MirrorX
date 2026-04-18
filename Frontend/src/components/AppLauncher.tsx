@@ -21,12 +21,12 @@ export const AppLauncher = ({ isOpen, onClose, user, onLogout, onSelectApp }: {
 }) => {
   const apps = [
     { name: 'Calendar', icon: <Calendar size={22} />, color: 'hsl(0, 100%, 65%)' },
-    { name: 'Spotify', icon: <Music size={22} />, color: 'hsl(142, 70%, 50%)' },
+    { name: 'Music', icon: <Music size={22} />, color: 'hsl(0, 100%, 50%)' },
     { name: 'Weather', icon: <Cloud size={22} />, color: 'hsl(186, 100%, 50%)' },
     { name: 'News', icon: <Newspaper size={22} />, color: 'hsl(35, 100%, 60%)' },
     { name: 'Notes', icon: <FileText size={22} />, color: 'hsl(210, 100%, 60%)' },
     { name: 'Clock', icon: <Clock1 size={22} />, color: 'hsl(186, 100%, 50%)' },
-    { name: 'Youtube', icon: <Play size={22} />, color: 'hsl(0, 80%, 50%)' },
+    { name: 'UTube', icon: <Play size={22} />, color: 'hsl(0, 80%, 50%)' },
     { name: 'Fashion', icon: <ShoppingBag size={22} />, color: 'hsl(320, 100%, 65%)' },
     { name: 'Settings', icon: <Settings size={22} />, color: 'hsl(240, 5%, 60%)' },
   ];

@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 import { CalendarApp } from './apps/CalendarApp';
 import { ClockApp } from './apps/ClockApp';
 import { NotesApp } from './apps/NotesApp';
-import { SpotifyApp } from './apps/SpotifyApp';
+import { YTMusicApp } from './apps/YTMusicApp';
 import { WeatherApp } from './apps/WeatherApp';
 import { SettingsApp } from './apps/SettingsApp';
 import { NewsApp } from './apps/NewsApp';
@@ -22,14 +22,14 @@ interface AppContainerProps {
 export const AppContainer = ({ activeApp, onClose, user, onLogout }: AppContainerProps) => {
   const renderApp = () => {
     switch (activeApp) {
-      case 'Calendar': return <CalendarApp />;
+      case 'Calendar': return <CalendarApp user={user} />;
       case 'Clock': return <ClockApp />;
       case 'Notes': return <NotesApp />;
-      case 'Spotify': return <SpotifyApp />;
+      case 'Music': return <YTMusicApp />;
       case 'Weather': return <WeatherApp />;
       case 'Settings': return <SettingsApp user={user} onLogout={onLogout} />;
       case 'News': return <NewsApp />;
-      case 'Youtube': return <YoutubeApp />;
+      case 'UTube': return <YoutubeApp />;
       case 'Fashion': return <FashionApp />;
       default: return null;
     }
