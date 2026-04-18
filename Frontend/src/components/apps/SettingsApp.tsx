@@ -30,6 +30,9 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser }: {
   const [theme, setTheme] = useState('Dark');
   const [accentColor, setAccentColor] = useState('#00f2ff');
 
+  const [messagesEnabled, setMessagesEnabled] = useState(true);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -206,22 +209,65 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser }: {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
              <h2 style={{ fontSize: '2rem', fontWeight: 600 }}>Notifications</h2>
              <div className="glass-panel" style={{ padding: '2rem', borderRadius: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                {/* Direct Messages Toggle */}
+                <div 
+                  onClick={() => setMessagesEnabled(!messagesEnabled)}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}
+                >
                   <div>
                     <h4 style={{ fontSize: '1.1rem', marginBottom: '0.2rem' }}>Mirror Direct Messages</h4>
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Get notified when you receive messages on the mirror surface.</p>
                   </div>
-                  <div style={{ width: '50px', height: '26px', background: 'var(--accent-primary)', borderRadius: '20px', position: 'relative' }}>
-                    <div style={{ position: 'absolute', right: '3px', top: '3px', width: '20px', height: '20px', background: 'black', borderRadius: '50%' }} />
+                  <div style={{ 
+                    width: '50px', 
+                    height: '26px', 
+                    background: messagesEnabled ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', 
+                    borderRadius: '20px', 
+                    position: 'relative',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    <div style={{ 
+                      position: 'absolute', 
+                      left: messagesEnabled ? '27px' : '3px', 
+                      top: '3px', 
+                      width: '20px', 
+                      height: '20px', 
+                      background: messagesEnabled ? 'black' : 'white', 
+                      borderRadius: '50%',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }} />
                   </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0' }}>
+
+                {/* Biometric Toggle */}
+                <div 
+                  onClick={() => setBiometricEnabled(!biometricEnabled)}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', cursor: 'pointer' }}
+                >
                   <div>
                     <h4 style={{ fontSize: '1.1rem', marginBottom: '0.2rem' }}>Biometric Alerts</h4>
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Security alerts for unrecognized face detection attempts.</p>
                   </div>
-                   <div style={{ width: '50px', height: '26px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', position: 'relative' }}>
-                    <div style={{ position: 'absolute', left: '3px', top: '3px', width: '20px', height: '20px', background: 'white', borderRadius: '50%' }} />
+                   <div style={{ 
+                     width: '50px', 
+                     height: '26px', 
+                     background: biometricEnabled ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', 
+                     borderRadius: '20px', 
+                     position: 'relative',
+                     transition: 'all 0.3s ease'
+                   }}>
+                    <div style={{ 
+                      position: 'absolute', 
+                      left: biometricEnabled ? '27px' : '3px', 
+                      top: '3px', 
+                      width: '20px', 
+                      height: '20px', 
+                      background: biometricEnabled ? 'black' : 'white', 
+                      borderRadius: '50%',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }} />
                   </div>
                 </div>
              </div>
