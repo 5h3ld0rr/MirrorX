@@ -155,18 +155,20 @@ function App() {
           </div>
         </div>
 
-        <FaceAuth
-          ref={faceAuthRef}
-          onUserAuth={(u) => handleAuth(u, true)}
-          hasInteracted={hasInteracted}
-          isLoggedIn={!!user}
-          isPaused={isAuthModalOpen}
-          isOnline={isOnline}
-          onStatusChange={setAuthStatus}
-          onActivity={() => {
-            if (!hasInteracted) setHasInteracted(true);
-          }}
-        />
+        {!user && (
+          <FaceAuth
+            ref={faceAuthRef}
+            onUserAuth={(u) => handleAuth(u, true)}
+            hasInteracted={hasInteracted}
+            isLoggedIn={false}
+            isPaused={isAuthModalOpen}
+            isOnline={isOnline}
+            onStatusChange={setAuthStatus}
+            onActivity={() => {
+              if (!hasInteracted) setHasInteracted(true);
+            }}
+          />
+        )}
 
         <div className="bottom-bar" style={{
           position: 'fixed',

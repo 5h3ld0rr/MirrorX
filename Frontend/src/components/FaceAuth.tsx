@@ -76,6 +76,8 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
   }, [isCameraEnabled]);
 
   const startCamera = async () => {
+    if (isLoggedIn || !hasInteracted || isPaused || !isOnline) return;
+    
     try {
       if (streamRef.current) {
         setIsCameraEnabled(true);
@@ -83,6 +85,13 @@ export const FaceAuth = forwardRef(({ onUserAuth, hasInteracted, isLoggedIn, onA
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      
+      // Double check state after async call
+      if (isLoggedIn || !hasInteracted) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+
       streamRef.current = stream;
       setIsCameraEnabled(true);
     } catch (err) {
