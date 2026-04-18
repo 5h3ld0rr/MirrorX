@@ -241,6 +241,7 @@ function App() {
           onClose={() => setActiveApp(null)}
           user={user}
           onLogout={handleLogout}
+          onUpdateUser={(updatedData) => handleAuth({ ...user, ...updatedData })}
         />
       </motion.div>
     </>
