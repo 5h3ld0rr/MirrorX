@@ -11,8 +11,8 @@ module.exports = {
     {
       name: "frontend",
       cwd: FRONTEND,
-      script: isDev ? "node_modules/vite/bin/vite.js" : "node_modules/serve/build/main.js",
-      args: isDev ? "" : "-s dist -l 80",
+      script: "node_modules/vite/bin/vite.js",
+      args: isDev ? "" : "preview",
       env: {
         NODE_ENV: 'production',
       },
