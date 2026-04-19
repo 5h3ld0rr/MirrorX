@@ -248,16 +248,20 @@ function App() {
 
       if (isAuthModalOpen || showWelcome) return;
 
+      const standbyVal = user?.standbyDelay || CONFIG.STANDBY_DELAY;
+      const logoutVal = user?.logoutDelay || CONFIG.TERMINATION_DELAY;
+
       if (hasInteracted) {
         sleepTimeout = setTimeout(() => {
           setHasInteracted(false);
-        }, CONFIG.STANDBY_DELAY);
+        }, standbyVal);
       }
 
-      const logoutDelay = hasInteracted ? CONFIG.STANDBY_DELAY + CONFIG.TERMINATION_DELAY : CONFIG.TERMINATION_DELAY;
+      const finalLogoutDelay = hasInteracted ? standbyVal + logoutVal : logoutVal;
       terminationTimeout = setTimeout(() => {
         if (user) handleLogout();
-      }, logoutDelay);
+      }, finalLogoutDelay);
+
     };
 
     const handleInteraction = () => {
