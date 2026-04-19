@@ -18,9 +18,17 @@ interface AppContainerProps {
   user: any;
   onLogout: () => void;
   onUpdateUser: (data: any) => void;
+  bleProps: {
+    bleConnected: boolean;
+    bleConnecting: boolean;
+    bleDeviceName: string;
+    bleCharacteristic: any;
+    connectBLE: () => Promise<void>;
+    disconnectBLE: () => Promise<void>;
+  };
 }
 
-export const AppContainer = ({ activeApp, onClose, user, onLogout, onUpdateUser }: AppContainerProps) => {
+export const AppContainer = ({ activeApp, onClose, user, onLogout, onUpdateUser, bleProps }: AppContainerProps) => {
   const renderApp = () => {
     switch (activeApp) {
       case 'Calendar': return <CalendarApp user={user} />;
@@ -28,7 +36,12 @@ export const AppContainer = ({ activeApp, onClose, user, onLogout, onUpdateUser 
       case 'Notes': return <NotesApp />;
       case 'Music': return <YTMusicApp />;
       case 'Weather': return <WeatherApp />;
-      case 'Settings': return <SettingsApp user={user} onLogout={onLogout} onUpdateUser={onUpdateUser} />;
+      case 'Settings': return <SettingsApp 
+        user={user} 
+        onLogout={onLogout} 
+        onUpdateUser={onUpdateUser} 
+        {...bleProps}
+      />;
       case 'News': return <NewsApp />;
       case 'UTube': return <YoutubeApp />;
       case 'Fashion': return <FashionApp />;

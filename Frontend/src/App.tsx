@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   Scan,
+  Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -38,15 +39,157 @@ function App() {
   const [authStatus, setAuthStatus] = useState<string>('Idle');
   const isOnline = useOnlineStatus();
   const faceAuthRef = useRef<any>(null);
+  const [bleDevice, setBleDevice] = useState<any>(null);
+  const [bleCharacteristic, setBleCharacteristic] = useState<any>(null);
+  const [bleConnected, setBleConnected] = useState(false);
+  const [bleConnecting, setBleConnecting] = useState(false);
+  const [bleDeviceName, setBleDeviceName] = useState('');
+
+  // Auto-connect BLE and apply saved RGB color
+  const autoConnectBLE = async (profile: any) => {
+    if (!profile?.rgbColor) return;
+    try {
+      const nav = navigator as any;
+      if (!nav.bluetooth?.getDevices) {
+        return;
+      }
+      const devices = await nav.bluetooth.getDevices();
+      const elkDevice = devices.find((d: any) => d.name?.startsWith('ELK'));
+      if (!elkDevice) {
+        return;
+      }
+
+      // Listen for advertisement to wake the device
+      const abortController = new AbortController();
+      elkDevice.addEventListener('advertisementreceived', async () => {
+        abortController.abort();
+        try {
+          setBleConnecting(true);
+          const server = await elkDevice.gatt.connect();
+          const service = await server.getPrimaryService('0000fff0-0000-1000-8000-00805f9b34fb');
+          const char = await service.getCharacteristic('0000fff3-0000-1000-8000-00805f9b34fb');
+          
+          setBleDevice(elkDevice);
+          setBleCharacteristic(char);
+          setBleConnected(true);
+          setBleDeviceName(elkDevice.name || 'ELK Device');
+
+          const { r, g, b } = profile.rgbColor;
+          const brightness = profile.brightness ?? 100;
+          const sR = Math.round(r * (brightness / 100));
+          const sG = Math.round(g * (brightness / 100));
+          const sB = Math.round(b * (brightness / 100));
+          await char.writeValue(
+            new Uint8Array([0x7E, 0x07, 0x05, 0x03, sR, sG, sB, 0x10, 0xEF])
+          );
+        } catch (err) {
+          console.error('BLE auto-apply error:', err);
+        } finally {
+          setBleConnecting(false);
+        }
+      }, { once: true });
+
+      // Also try direct connect (works if device is already in range)
+      try {
+        setBleConnecting(true);
+        const server = await elkDevice.gatt.connect();
+        const service = await server.getPrimaryService('0000fff0-0000-1000-8000-00805f9b34fb');
+        const char = await service.getCharacteristic('0000fff3-0000-1000-8000-00805f9b34fb');
+        
+        setBleDevice(elkDevice);
+        setBleCharacteristic(char);
+        setBleConnected(true);
+        setBleDeviceName(elkDevice.name || 'ELK Device');
+        abortController.abort(); // Cancel advertisement listener
+
+        const { r, g, b } = profile.rgbColor;
+        const brightness = profile.brightness ?? 100;
+        const sR = Math.round(r * (brightness / 100));
+        const sG = Math.round(g * (brightness / 100));
+        const sB = Math.round(b * (brightness / 100));
+        await char.writeValue(
+          new Uint8Array([0x7E, 0x07, 0x05, 0x03, sR, sG, sB, 0x10, 0xEF])
+        );
+      } catch {
+        // Direct connect failed, waiting for advertisement listener above
+        elkDevice.watchAdvertisements?.({ signal: abortController.signal }).catch(() => {});
+      } finally {
+        setBleConnecting(false);
+      }
+    } catch (err) {
+      console.error('BLE auto-connect error:', err);
+    }
+  };
+
+  const connectBLE = async () => {
+    setBleConnecting(true);
+    try {
+      const device = await (navigator as any).bluetooth.requestDevice({
+        filters: [{ namePrefix: 'ELK' }],
+        optionalServices: ['0000fff0-0000-1000-8000-00805f9b34fb'],
+      });
+      
+      device.addEventListener('gattserverdisconnected', () => {
+        setBleConnected(false);
+        setBleCharacteristic(null);
+        setBleDeviceName('');
+        setBleDevice(null);
+      });
+      
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService('0000fff0-0000-1000-8000-00805f9b34fb');
+      const char = await service.getCharacteristic('0000fff3-0000-1000-8000-00805f9b34fb');
+      
+      setBleDevice(device);
+      setBleCharacteristic(char);
+      setBleConnected(true);
+      setBleDeviceName(device.name || 'ELK Device');
+      
+      // Apply user's saved color if available after manual connect
+      if (user?.rgbColor) {
+        const { r, g, b } = user.rgbColor;
+        const brightness = user.brightness ?? 100;
+        const sR = Math.round(r * (brightness / 100));
+        const sG = Math.round(g * (brightness / 100));
+        const sB = Math.round(b * (brightness / 100));
+        await char.writeValue(
+          new Uint8Array([0x7E, 0x07, 0x05, 0x03, sR, sG, sB, 0x10, 0xEF])
+        );
+      }
+    } catch (err) {
+      console.error('BLE connect error:', err);
+    } finally {
+      setBleConnecting(false);
+    }
+  };
+
+  const disconnectBLE = async () => {
+    if (bleDevice?.gatt?.connected) {
+      bleDevice.gatt.disconnect();
+    }
+    setBleDevice(null);
+    setBleCharacteristic(null);
+    setBleConnected(false);
+    setBleDeviceName('');
+  };
 
   const handleAuth = (userData: any, isNewLogin: boolean = false) => {
     setUser(userData);
     if (isNewLogin) {
       setShowWelcome(true);
+      autoConnectBLE(userData);
     }
   };
 
   const handleLogout = () => {
+    // Disconnect BLE on logout
+    if (bleDevice?.gatt?.connected) {
+      bleDevice.gatt.disconnect();
+    }
+    setBleDevice(null);
+    setBleCharacteristic(null);
+    setBleConnected(false);
+    setBleDeviceName('');
     auth.signOut();
     setUser(null);
     setHasInteracted(false);
@@ -61,6 +204,8 @@ function App() {
           // Fetch enriched profile from Firestore via Backend
           const profile = await getUserProfile();
           handleAuth(profile, false);
+          // Auto-connect BLE on session restore too
+          autoConnectBLE(profile);
         } catch (error) {
           // Fallback to basic Firebase info if profile fetch fails
           handleAuth({
@@ -156,10 +301,12 @@ function App() {
         <GlobalPlayer />
         <MusicWidget isIdle={!hasInteracted && !isAuthModalOpen && !showWelcome} />
         <div className="top-bar" style={{ justifyContent: 'flex-end' }}>
-          <ReminderWidget user={user} isActive={hasInteracted || isAuthModalOpen} />
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
-            <Clock />
-            <Weather isActive={hasInteracted || isAuthModalOpen} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+            <ReminderWidget user={user} isActive={hasInteracted || isAuthModalOpen} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
+              <Clock />
+              <Weather isActive={hasInteracted || isAuthModalOpen} />
+            </div>
           </div>
         </div>
 
@@ -257,6 +404,14 @@ function App() {
           user={user}
           onLogout={handleLogout}
           onUpdateUser={(updatedData) => handleAuth({ ...user, ...updatedData })}
+          bleProps={{
+            bleConnected,
+            bleConnecting,
+            bleDeviceName,
+            bleCharacteristic,
+            connectBLE,
+            disconnectBLE
+          }}
         />
       </motion.div>
     </>
