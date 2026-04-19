@@ -7,9 +7,9 @@ interface MusicWidgetProps {
 }
 
 export const MusicWidget = ({ isIdle }: MusicWidgetProps) => {
-  const { currentTrack, isPlaying, togglePlay, skipForward, skipBackward, progress, duration } = useMusic();
+  const { currentTrack, isPlaying, togglePlay, skipForward, skipBackward, progress, duration, activeType } = useMusic();
 
-  if (!currentTrack) return null;
+  if (!currentTrack || activeType === 'video') return null;
 
   return (
     <AnimatePresence>

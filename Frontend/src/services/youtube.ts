@@ -120,4 +120,28 @@ export const youtubeService = {
       return [];
     }
   },
+
+  async getRelatedVideos(videoId: string, maxResults = 10): Promise<YouTubeVideo[]> {
+    try {
+      const response = await youtubeApi.get('/search', {
+        params: {
+          relatedToVideoId: videoId,
+          part: 'snippet',
+          type: 'video',
+          maxResults,
+        },
+      });
+
+      return response.data.items.map((item: any) => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url,
+        channelTitle: item.snippet.channelTitle,
+        publishedAt: item.snippet.publishedAt,
+      }));
+    } catch (error) {
+      console.error('Error fetching related videos:', error);
+      return [];
+    }
+  },
 };
