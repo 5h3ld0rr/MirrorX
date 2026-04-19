@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Settings, User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Moon, Sun, Monitor, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap } from 'lucide-react';
+import { Settings, User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap } from 'lucide-react';
 import { updateProfile, updateProfilePicture } from '../../lib/api';
 
 export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleConnecting, bleDeviceName, bleCharacteristic, connectBLE, disconnectBLE }: { 
@@ -34,10 +34,10 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
   const [photoURL, setPhotoURL] = useState(user.photoURL || '');
   
   // Appearance & Notification State
-  const [theme, setTheme] = useState('Dark');
-  const [accentColor, setAccentColor] = useState('#00f2ff');
+  const [accentColor, setAccentColor] = useState(user.accentColor || '#00f2ff');
   const [messagesEnabled, setMessagesEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [appBrightness, setAppBrightness] = useState(user.appBrightness ?? 100);
   
   // RGB State
   const [rgbColor, setRgbColor] = useState(user.rgbColor || { r: 255, g: 0, b: 0 });
@@ -60,6 +60,31 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
       }
     }, 800);
   }, [onUpdateUser]);
+
+  const saveAppBrightnessToCloud = useCallback((bright: number) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await updateProfile({ appBrightness: bright });
+        onUpdateUser({ appBrightness: bright });
+      } catch (err) {
+        console.error('Failed to save app brightness:', err);
+      }
+    }, 800);
+  }, [onUpdateUser]);
+
+  const saveAccentColorToCloud = useCallback((color: string) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await updateProfile({ accentColor: color });
+        onUpdateUser({ accentColor: color });
+      } catch (err) {
+        console.error('Failed to save accent color:', err);
+      }
+    }, 800);
+  }, [onUpdateUser]);
+
 
   // Cleanup save timer on unmount
   useEffect(() => {
@@ -428,40 +453,17 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
              <h2 style={{ fontSize: '2rem', fontWeight: 600 }}>Appearance</h2>
              <div className="glass-panel" style={{ padding: '2.5rem', borderRadius: '24px' }}>
-                <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'block' }}>Interface Theme</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '3rem' }}>
-                  {[
-                    { name: 'Light', icon: <Sun size={20} /> },
-                    { name: 'Dark', icon: <Moon size={20} /> },
-                    { name: 'System', icon: <Monitor size={20} /> }
-                  ].map(t => (
-                    <button 
-                      key={t.name}
-                      onClick={() => setTheme(t.name)}
-                      style={{ 
-                        height: '100px', 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        gap: '0.8rem',
-                        background: theme === t.name ? 'rgba(0, 242, 255, 0.1)' : 'rgba(255,255,255,0.03)',
-                        borderColor: theme === t.name ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)',
-                        color: theme === t.name ? 'var(--accent-primary)' : 'white'
-                      }}
-                    >
-                      {t.icon}
-                      {t.name}
-                    </button>
-                  ))}
-                </div>
 
                 <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'block' }}>Accent Color</label>
                 <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
                     {['#00f2ff', '#ff00ff', '#facc15', '#4ade80', '#ffffff'].map(c => (
                       <div 
                         key={c} 
-                        onClick={() => setAccentColor(c)}
+                        onClick={() => {
+                          setAccentColor(c);
+                          onUpdateUser({ accentColor: c }); // Immediate glow preview
+                          saveAccentColorToCloud(c);
+                        }}
                         style={{ 
                           width: '40px', 
                           height: '40px', 
@@ -473,6 +475,33 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
                         }} 
                       />
                     ))}
+                </div>
+
+                <div style={{ marginTop: '3.5rem' }}>
+                    <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', letterSpacing: '0.05em' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}><Sun size={14} /> Screen Brightness</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: 'white', fontWeight: 600 }}>{appBrightness}%</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="10"
+                      max="100"
+                      value={appBrightness}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        setAppBrightness(val);
+                        onUpdateUser({ appBrightness: val });
+                        saveAppBrightnessToCloud(val);
+                      }}
+                      style={{
+                        width: '100%', height: '8px', borderRadius: '4px',
+                        appearance: 'none', outline: 'none', cursor: 'pointer',
+                        background: `linear-gradient(to right, rgba(255,255,255,0.05) 0%, var(--accent-primary) ${appBrightness}%, rgba(255,255,255,0.08) ${appBrightness}%)`,
+                      }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.6rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      <span>Dimmed</span><span>Full Luminance</span>
+                    </div>
                 </div>
              </div>
           </div>

@@ -197,6 +197,23 @@ function App() {
     setActiveApp(null);
   };
 
+  // Synchronize Global Accent Color
+  useEffect(() => {
+    if (user?.accentColor) {
+      const root = document.documentElement;
+      root.style.setProperty('--accent-primary', user.accentColor);
+      // Generate partial opacity versions for glassmorphism
+      root.style.setProperty('--accent-glow', `${user.accentColor}4D`); // 30% alpha
+      root.style.setProperty('--border-accent', `${user.accentColor}33`); // 20% alpha
+    } else {
+      // Reset to default electric blue if no preference
+      const root = document.documentElement;
+      root.style.setProperty('--accent-primary', '#00f2ff');
+      root.style.setProperty('--accent-glow', 'rgba(0, 242, 255, 0.3)');
+      root.style.setProperty('--border-accent', 'rgba(0, 242, 255, 0.2)');
+    }
+  }, [user?.accentColor]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -414,6 +431,17 @@ function App() {
           }}
         />
       </motion.div>
+      {user && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'black',
+          opacity: 1 - (user.appBrightness ?? 100) / 100,
+          pointerEvents: 'none',
+          zIndex: 10000,
+          transition: 'opacity 0.3s ease'
+        }} />
+      )}
     </>
   );
 }
