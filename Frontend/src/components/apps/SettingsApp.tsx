@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Settings, User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap, Moon, Timer } from 'lucide-react';
+import { Settings, User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap, Moon, Timer, MessageSquare, BookOpen, Cpu, FileText, ExternalLink, X, Send, Bot } from 'lucide-react';
 import { updateProfile, updateProfilePicture } from '../../lib/api';
 import { CONFIG } from '../../config';
 
@@ -50,6 +50,13 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
   const [logoutDelay, setLogoutDelay] = useState(user.logoutDelay || CONFIG.TERMINATION_DELAY);
   const colorWheelRef = useRef<HTMLCanvasElement>(null);
   const saveTimerRef = useRef<any>(null);
+
+  // Chat State
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessage, setChatMessage] = useState('');
+  const [chatHistory, setChatHistory] = useState([
+    { role: 'assistant', content: "Hello! I'm the MirrorX Virtual Assistant. How can I help you today?" }
+  ]);
 
   // Save RGB settings to Firestore (debounced)
   const saveRgbToCloud = useCallback((color: { r: number, g: number, b: number }, bright: number) => {
@@ -945,6 +952,77 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
             </div>
           </div>
         );
+      case 'Help & Support':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+             <header>
+               <h2 style={{ fontSize: '2.2rem', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Help & Support</h2>
+               <p style={{ color: 'var(--text-muted)' }}>Get expert assistance and master your MirrorX experience.</p>
+             </header>
+
+             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 400px)', justifyContent: 'center', gap: '1.5rem' }}>
+                {[
+                  { 
+                    icon: MessageSquare, 
+                    title: 'Live Chat', 
+                    desc: 'Instant support', 
+                    color: 'var(--accent-primary)',
+                    onClick: () => setShowChat(true)
+                  },
+                ].map((item, idx) => (
+                  <div key={idx} className="glass-panel" 
+                    onClick={item.onClick}
+                    style={{ padding: '2rem', borderRadius: '24px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s ease' }}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  >
+                    <div style={{ width: '60px', height: '60px', borderRadius: '18px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                      <item.icon size={30} color={item.color} />
+                    </div>
+                    <h4 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{item.title}</h4>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{item.desc}</p>
+                  </div>
+                ))}
+             </div>
+
+             <div className="glass-panel" style={{ padding: '2.5rem', borderRadius: '24px' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <FileText size={20} color="var(--accent-primary)" />
+                  Common Questions
+                </h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                   {[
+                     { q: 'How do I bridge the Bluetooth connection?', a: 'Power on your ELK LED strip and ensure no other device is paired. Navigate to the RGB Controller tab and tap Connect.' },
+                     { q: 'Can I add multiple user identities?', a: 'MirrorX currently supports a single primary workspace per device. Multi-user switching is planned for a future firmware update.' },
+                     { q: 'Where is my biometric data stored?', a: 'Descriptors are stored within the hardware secure element and are never uploaded to the cloud server.' }
+                   ].map((faq, idx) => (
+                     <div key={idx} style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <h4 style={{ color: 'var(--accent-primary)', fontSize: '0.95rem', marginBottom: '0.75rem', fontWeight: 600 }}>Q: {faq.q}</h4>
+                        <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>{faq.a}</p>
+                     </div>
+                   ))}
+                </div>
+             </div>
+
+             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <Cpu size={24} color="var(--text-muted)" />
+                <div style={{ flex: 1 }}>
+                   <div style={{ display: 'flex', gap: '2rem' }}>
+                      <div>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>System Version</p>
+                        <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>v2.4.0 (Enterprise)</p>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>Build</p>
+                        <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>2024.Q2.MIRROR</p>
+                      </div>
+                   </div>
+                </div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>MirrorX Neural Core © 2024</div>
+             </div>
+          </div>
+        );
       default:
         return <div style={{ opacity: 0.5, textAlign: 'center', marginTop: '10rem' }}>Section under development</div>;
     }
@@ -1013,6 +1091,78 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
           {renderSectionContent()}
         </div>
       </div>
+
+      {/* Live Chat Modal */}
+      {showChat && (
+        <div style={{ position: 'fixed', bottom: '30px', right: '30px', width: '380px', height: '550px', zIndex: 9999, display: 'flex', flexDirection: 'column' }} className="glass-panel">
+           <div style={{ padding: '1.5rem', background: 'var(--accent-primary)', color: 'black', borderRadius: '24px 24px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                 <div style={{ position: 'relative' }}>
+                    <Bot size={24} />
+                    <div style={{ position: 'absolute', bottom: -2, right: -2, width: 8, height: 8, background: '#10b981', borderRadius: '50%', border: '2px solid black' }} />
+                 </div>
+                 <div>
+                    <h4 style={{ fontSize: '1rem', fontWeight: 600 }}>MirrorX Assistant</h4>
+                    <p style={{ fontSize: '0.7rem', opacity: 0.8 }}>Online & ready to help</p>
+                 </div>
+              </div>
+              <button onClick={() => setShowChat(false)} style={{ background: 'rgba(0,0,0,0.1)', border: 'none', cursor: 'pointer', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <X size={18} />
+              </button>
+           </div>
+           
+           <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(0,0,0,0.2)' }}>
+              {chatHistory.map((chat, idx) => (
+                <div key={idx} style={{ 
+                  alignSelf: chat.role === 'user' ? 'flex-end' : 'flex-start',
+                  maxWidth: '80%',
+                  padding: '1rem',
+                  borderRadius: chat.role === 'user' ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
+                  background: chat.role === 'user' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)',
+                  color: chat.role === 'user' ? 'black' : 'white',
+                  fontSize: '0.9rem',
+                  lineHeight: 1.5,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                }}>
+                   {chat.content}
+                </div>
+              ))}
+           </div>
+
+           <div style={{ padding: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '0.8rem' }}>
+              <input 
+                type="text" 
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && chatMessage.trim()) {
+                    const newHist = [...chatHistory, { role: 'user', content: chatMessage }];
+                    setChatHistory(newHist);
+                    setChatMessage('');
+                    setTimeout(() => {
+                      setChatHistory([...newHist, { role: 'assistant', content: "Our support systems are currently undergoing a high-frequency neural calibration. A specialist will be with you shortly. Thank you for your patience." }]);
+                    }, 1000);
+                  }
+                }}
+                placeholder="Type your message..."
+                style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0.8rem 1rem', color: 'white', outline: 'none' }}
+              />
+              <button 
+                onClick={() => {
+                  if (!chatMessage.trim()) return;
+                  const newHist = [...chatHistory, { role: 'user', content: chatMessage }];
+                  setChatHistory(newHist);
+                  setChatMessage('');
+                  setTimeout(() => {
+                    setChatHistory([...newHist, { role: 'assistant', content: "Our support systems are currently undergoing a high-frequency neural calibration. A specialist will be with you shortly. Thank you for your patience." }]);
+                  }, 1000);
+                }}
+                style={{ background: 'var(--accent-primary)', border: 'none', borderRadius: '12px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'black' }}>
+                 <Send size={20} />
+              </button>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
