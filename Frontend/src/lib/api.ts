@@ -19,7 +19,15 @@ export const getUserProfile = async () => {
   if (!response.ok) throw new Error('Failed to fetch profile');
   return await response.json();
 };
-export const updateProfile = async (data: { name?: string, bio?: string, rgbColor?: { r: number, g: number, b: number }, brightness?: number, appBrightness?: number, accentColor?: string }) => {
+export const updateProfile = async (data: { 
+  name?: string, 
+  bio?: string, 
+  rgbColor?: { r: number, g: number, b: number }, 
+  brightness?: number, 
+  appBrightness?: number, 
+  accentColor?: string,
+  alarms?: any[]
+}) => {
   const token = await auth.currentUser?.getIdToken();
   if (!token) throw new Error("No authenticated user");
 

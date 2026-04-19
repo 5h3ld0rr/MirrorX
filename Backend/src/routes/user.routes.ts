@@ -42,7 +42,7 @@ router.get("/", verifyToken as any, async (req: Request, res: Response) => {
 router.patch("/profile", verifyToken as any, async (req: Request, res: Response) => {
   try {
     const uid = (req as any).user.uid;
-    const { name, bio, rgbColor, brightness, appBrightness, accentColor } = req.body;
+    const { name, bio, rgbColor, brightness, appBrightness, accentColor, alarms } = req.body;
 
     const updateData: any = {};
     if (name) updateData.name = name;
@@ -51,6 +51,7 @@ router.patch("/profile", verifyToken as any, async (req: Request, res: Response)
     if (brightness !== undefined) updateData.brightness = brightness;
     if (appBrightness !== undefined) updateData.appBrightness = appBrightness;
     if (accentColor !== undefined) updateData.accentColor = accentColor;
+    if (alarms !== undefined) updateData.alarms = alarms;
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: "No fields to update" });

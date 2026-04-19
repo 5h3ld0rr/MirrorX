@@ -14,6 +14,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getUserProfile, updateProfile } from '../../lib/api';
 
 interface WorldClock {
   id: string;
@@ -49,6 +50,12 @@ export const ClockApp = () => {
     { id: '1', time: '07:00 AM', label: 'Morning', active: true, days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] },
     { id: '2', time: '09:30 AM', label: 'Meeting', active: false, days: ['Mon', 'Wed', 'Fri'] },
   ]);
+  const [isAddAlarmOpen, setIsAddAlarmOpen] = useState(false);
+  const [editingAlarm, setEditingAlarm] = useState<Alarm | null>(null);
+  const [newAlarmTime, setNewAlarmTime] = useState('07:00');
+  const [newAlarmLabel, setNewAlarmLabel] = useState('');
+  const [selectedDays, setSelectedDays] = useState<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+  const dayOptions = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   // Timer State
   const [timerInput, setTimerInput] = useState({ h: 0, m: 10, s: 0 });
@@ -59,6 +66,20 @@ export const ClockApp = () => {
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
+    
+    // Load alarms from Firestore
+    const loadAlarms = async () => {
+      try {
+        const profile = await getUserProfile();
+        if (profile.alarms && profile.alarms.length > 0) {
+          setAlarms(profile.alarms);
+        }
+      } catch (err) {
+        console.error("Failed to load alarms:", err);
+      }
+    };
+    loadAlarms();
+
     return () => clearInterval(timer);
   }, []);
 
@@ -133,6 +154,79 @@ export const ClockApp = () => {
   const removeCity = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setWorldClocks(worldClocks.filter(c => c.id !== id));
+  };
+
+  // Alarm Helpers
+  const closeAlarmModal = () => {
+    setIsAddAlarmOpen(false);
+    setEditingAlarm(null);
+    setNewAlarmTime('07:00');
+    setNewAlarmLabel('');
+    setSelectedDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+  };
+
+  const openEditAlarm = (alarm: Alarm) => {
+    setEditingAlarm(alarm);
+    const [t, ampm] = alarm.time.split(' ');
+    let [h, m] = t.split(':');
+    let hour = parseInt(h);
+    if (ampm === 'PM' && hour < 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    setNewAlarmTime(`${hour.toString().padStart(2, '0')}:${m}`);
+    setNewAlarmLabel(alarm.label);
+    setSelectedDays(alarm.days);
+    setIsAddAlarmOpen(true);
+  };
+
+  const saveAlarm = () => {
+    const [h, m] = newAlarmTime.split(':');
+    const hour = parseInt(h);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    const timeStr = `${displayHour.toString().padStart(2, '0')}:${m} ${ampm}`;
+
+    let updatedAlarms: Alarm[];
+    if (editingAlarm) {
+      updatedAlarms = alarms.map(a => a.id === editingAlarm.id ? { 
+        ...a, 
+        time: timeStr, 
+        label: newAlarmLabel || 'Alarm', 
+        days: selectedDays 
+      } : a);
+    } else {
+      updatedAlarms = [...alarms, {
+        id: Date.now().toString(),
+        time: timeStr,
+        label: newAlarmLabel || 'Alarm',
+        active: true,
+        days: selectedDays
+      }];
+    }
+    setAlarms(updatedAlarms);
+    updateProfile({ alarms: updatedAlarms }).catch(console.error);
+    closeAlarmModal();
+  };
+
+  const deleteAlarm = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updatedAlarms = alarms.filter(a => a.id !== id);
+    setAlarms(updatedAlarms);
+    updateProfile({ alarms: updatedAlarms }).catch(console.error);
+  };
+
+  const toggleAlarm = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updatedAlarms = alarms.map(a => a.id === id ? { ...a, active: !a.active } : a);
+    setAlarms(updatedAlarms);
+    updateProfile({ alarms: updatedAlarms }).catch(console.error);
+  };
+
+  const toggleDay = (day: string) => {
+    if (selectedDays.includes(day)) {
+      setSelectedDays(selectedDays.filter(d => d !== day));
+    } else {
+      setSelectedDays([...selectedDays, day]);
+    }
   };
 
   // Timer Helpers
@@ -302,37 +396,63 @@ export const ClockApp = () => {
               exit={{ opacity: 0, x: 20 }}
               style={{ padding: '0 2rem' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h2 style={{ fontSize: '2rem', fontWeight: 300 }}>Alarms</h2>
-                <button className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem' }}>
+                <button 
+                  className="glass-panel" 
+                  onClick={() => setIsAddAlarmOpen(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem' }}
+                >
                   <Plus size={18} /> New Alarm
                 </button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
                 {alarms.map(alarm => (
-                  <div key={alarm.id} className="glass-panel" style={{ padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: alarm.active ? 1 : 0.6, transition: 'opacity 0.3s' }}>
+                  <div 
+                    key={alarm.id} 
+                    className="glass-panel" 
+                    onClick={() => openEditAlarm(alarm)}
+                    style={{ 
+                      padding: '2rem', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      opacity: alarm.active ? 1 : 0.6, 
+                      transition: 'all 0.3s',
+                      cursor: 'pointer',
+                      position: 'relative'
+                    }}
+                  >
                     <div>
                       <div style={{ fontSize: '3rem', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>{alarm.time}</div>
                       <div style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>{alarm.label} • {alarm.days.join(', ')}</div>
                     </div>
-                    <button 
-                      onClick={() => setAlarms(alarms.map(a => a.id === alarm.id ? { ...a, active: !a.active } : a))}
-                      style={{ 
-                        width: '60px', 
-                        height: '32px', 
-                        borderRadius: '16px', 
-                        background: alarm.active ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)',
-                        position: 'relative',
-                        padding: '0',
-                        border: 'none',
-                        transition: 'background 0.3s'
-                      }}
-                    >
-                      <motion.div 
-                        animate={{ x: alarm.active ? 28 : 4 }}
-                        style={{ width: '24px', height: '24px', background: 'white', borderRadius: '50%', position: 'absolute', top: '4px' }}
-                      />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                      <button 
+                        onClick={(e) => deleteAlarm(alarm.id, e)}
+                        style={{ background: 'transparent', border: 'none', color: 'rgba(255, 61, 61, 0.6)', cursor: 'pointer', padding: '0.5rem' }}
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                      <button 
+                        onClick={(e) => toggleAlarm(alarm.id, e)}
+                        style={{ 
+                          width: '60px', 
+                          height: '32px', 
+                          borderRadius: '16px', 
+                          background: alarm.active ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)',
+                          position: 'relative',
+                          padding: '0',
+                          border: 'none',
+                          transition: 'background 0.3s'
+                        }}
+                      >
+                        <motion.div 
+                          animate={{ x: alarm.active ? 28 : 4 }}
+                          style={{ width: '24px', height: '24px', background: 'white', borderRadius: '50%', position: 'absolute', top: '4px' }}
+                        />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -485,6 +605,117 @@ export const ClockApp = () => {
                     No cities found
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add/Edit Alarm Modal */}
+      <AnimatePresence>
+        {isAddAlarmOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.85)',
+              backdropFilter: 'blur(15px)',
+              zIndex: 2000,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: '2rem'
+            }}
+            onClick={closeAlarmModal}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="glass-panel"
+              style={{ 
+                width: '100%', 
+                maxWidth: '450px', 
+                padding: '2.5rem',
+                border: '1px solid rgba(0, 242, 255, 0.2)',
+                borderRadius: '24px'
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 style={{ fontSize: '1.8rem', marginBottom: '2rem', fontWeight: 300 }}>
+                {editingAlarm ? 'Edit Alarm' : 'New Alarm'}
+              </h2>
+              
+              <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+                <input 
+                  type="time" 
+                  value={newAlarmTime}
+                  onChange={(e) => setNewAlarmTime(e.target.value)}
+                  style={{ 
+                    fontSize: '4rem', 
+                    background: 'transparent', 
+                    border: 'none', 
+                    color: 'white', 
+                    width: '100%',
+                    textAlign: 'center',
+                    fontFamily: 'var(--font-mono)',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div className="input-group" style={{ marginBottom: '2rem' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>Label</label>
+                <input 
+                  type="text" 
+                  placeholder="Wake up" 
+                  value={newAlarmLabel}
+                  onChange={(e) => setNewAlarmLabel(e.target.value)}
+                  style={{ width: '100%', padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '2.5rem' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '1rem', display: 'block' }}>Repeat</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
+                  {dayOptions.map(day => (
+                    <button
+                      key={day}
+                      onClick={() => toggleDay(day)}
+                      style={{
+                        flex: 1,
+                        padding: '0.75rem 0',
+                        borderRadius: '8px',
+                        fontSize: '0.75rem',
+                        background: selectedDays.includes(day) ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)',
+                        color: selectedDays.includes(day) ? 'black' : 'white',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button 
+                  onClick={closeAlarmModal}
+                  style={{ flex: 1, padding: '1rem', borderRadius: '12px', background: 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={saveAlarm}
+                  style={{ flex: 1, padding: '1rem', borderRadius: '12px', background: 'var(--accent-primary)', color: 'black', fontWeight: 600, border: 'none', cursor: 'pointer' }}
+                >
+                  Save Alarm
+                </button>
               </div>
             </motion.div>
           </motion.div>
