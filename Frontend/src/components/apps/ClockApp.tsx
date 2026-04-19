@@ -9,9 +9,7 @@ import {
   Search, 
   Play, 
   Pause, 
-  RotateCcw, 
-  Bell, 
-  BellOff,
+  RotateCcw,
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
@@ -57,12 +55,21 @@ export const ClockApp = () => {
   const [timerRemaining, setTimerRemaining] = useState(600); // 10 mins in seconds
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [totalTimerTime, setTotalTimerTime] = useState(600);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timerIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const startTimer = () => {
+    const total = timerInput.h * 3600 + timerInput.m * 60 + timerInput.s;
+    if (total > 0) {
+      setTimerRemaining(total);
+      setTotalTimerTime(total);
+      setIsTimerRunning(true);
+    }
+  };
 
   // Timer Logic
   useEffect(() => {
@@ -129,18 +136,26 @@ export const ClockApp = () => {
   };
 
   // Timer Helpers
-  const startTimer = () => {
-    const total = timerInput.h * 3600 + timerInput.m * 60 + timerInput.s;
-    if (total > 0) {
-      setTimerRemaining(total);
-      setTotalTimerTime(total);
-      setIsTimerRunning(true);
+  const handleTimerInputChange = (unit: 'h' | 'm' | 's', increment: boolean) => {
+    const max = unit === 'h' ? 99 : 59;
+    let newValue = timerInput[unit] + (increment ? 1 : -1);
+    newValue = Math.max(0, Math.min(newValue, max));
+    
+    const newInputs = { ...timerInput, [unit]: newValue };
+    setTimerInput(newInputs);
+    
+    if (!isTimerRunning && timerRemaining === totalTimerTime) {
+      const newTotal = newInputs.h * 3600 + newInputs.m * 60 + newInputs.s;
+      setTimerRemaining(newTotal);
+      setTotalTimerTime(newTotal);
     }
   };
 
   const resetTimer = () => {
     setIsTimerRunning(false);
-    setTimerRemaining(timerInput.h * 3600 + timerInput.m * 60 + timerInput.s);
+    const total = timerInput.h * 3600 + timerInput.m * 60 + timerInput.s;
+    setTimerRemaining(total);
+    setTotalTimerTime(total);
   };
 
   const formatTimerDisplay = (seconds: number) => {
@@ -351,13 +366,13 @@ export const ClockApp = () => {
 
               {!isTimerRunning && timerRemaining === totalTimerTime && (
                 <div style={{ display: 'flex', gap: '2rem', marginTop: '3rem' }}>
-                  {['h', 'm', 's'].map(unit => (
+                  {(['h', 'm', 's'] as const).map(unit => (
                     <div key={unit} style={{ textAlign: 'center' }}>
                       <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '1rem' }}>{unit === 'h' ? 'Hours' : unit === 'm' ? 'Minutes' : 'Seconds'}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                        <button onClick={() => setTimerInput(prev => ({ ...prev, [unit]: Math.min(prev[unit as keyof typeof prev] + 1, 59) }))} style={{ padding: '0.5rem', background: 'transparent', border: 'none' }}><ChevronUp size={24}/></button>
-                        <div style={{ fontSize: '3rem', fontWeight: 300, width: '60px' }}>{timerInput[unit as keyof typeof timerInput].toString().padStart(2, '0')}</div>
-                        <button onClick={() => setTimerInput(prev => ({ ...prev, [unit]: Math.max(prev[unit as keyof typeof prev] - 1, 0) }))} style={{ padding: '0.5rem', background: 'transparent', border: 'none' }}><ChevronDown size={24}/></button>
+                        <button onClick={() => handleTimerInputChange(unit, true)} style={{ padding: '0.5rem', background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}><ChevronUp size={24}/></button>
+                        <div style={{ fontSize: '3rem', fontWeight: 300, width: '60px' }}>{timerInput[unit].toString().padStart(2, '0')}</div>
+                        <button onClick={() => handleTimerInputChange(unit, false)} style={{ padding: '0.5rem', background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}><ChevronDown size={24}/></button>
                       </div>
                     </div>
                   ))}
@@ -366,7 +381,11 @@ export const ClockApp = () => {
 
               <div style={{ display: 'flex', gap: '2rem', marginTop: '4rem' }}>
                 <button 
-                  onClick={() => setIsTimerRunning(!isTimerRunning)} 
+                  onClick={() => {
+                    if (isTimerRunning) setIsTimerRunning(false);
+                    else if (timerRemaining === totalTimerTime) startTimer();
+                    else setIsTimerRunning(true);
+                  }} 
                   className="glass-panel"
                   style={{ 
                     padding: '1.5rem 3rem', 
