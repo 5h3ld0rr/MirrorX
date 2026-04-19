@@ -149,17 +149,22 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth, isOnline }: {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <motion.div
+            <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="glass-panel modal accent-border"
+            className="glass-panel modal"
             style={{
               position: 'relative',
-              width: isLogin ? '400px' : '850px',
+              width: isLogin ? '450px' : '900px',
               maxWidth: '95vw',
               transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-              padding: isLogin ? '2.5rem' : '3rem'
+              padding: isLogin ? '3rem' : '3.5rem',
+              background: 'rgba(10, 10, 10, 0.9)',
+              backdropFilter: 'blur(40px) saturate(200%)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '40px',
+              boxShadow: '0 50px 100px rgba(0,0,0,0.9)'
             }}
           >
             <button
@@ -199,13 +204,14 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth, isOnline }: {
                 <div style={{
                   flex: '1.2',
                   overflow: 'hidden',
-                  border: '1px solid rgba(0, 242, 255, 0.4)',
+                  border: '1px solid rgba(0, 242, 255, 0.2)',
                   background: '#000',
                   aspectRatio: '1/1',
                   position: 'relative',
-                  borderRadius: '24px',
-                  boxShadow: '0 0 40px rgba(0, 242, 255, 0.15)'
+                  borderRadius: '32px',
+                  boxShadow: '0 0 50px rgba(0, 242, 255, 0.1)'
                 }}>
+                  <div style={{ position: 'absolute', inset: 0, border: '1px solid rgba(255,255,255,0.05)', borderRadius: '32px', zIndex: 2, pointerEvents: 'none' }} />
                   <video
                     ref={videoRef}
                     autoPlay
@@ -218,28 +224,29 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth, isOnline }: {
                       transform: 'scaleX(-1)',
                       borderRadius: '0',
                       opacity: 1,
-                      filter: 'none'
-                    }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '1.5rem',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: 'rgba(0,0,0,0.7)',
-                    padding: '0.6rem 1.2rem',
-                    borderRadius: '20px',
-                    fontSize: '0.8rem',
-                    color: '#fff',
-                    fontWeight: 500,
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    width: 'max-content',
-                    textAlign: 'center'
-                  }}>
-                    Position yourself in the center
-                  </div>
+                    filter: 'grayscale(10%) contrast(105%)',
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  bottom: '2rem',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: 'rgba(0, 242, 255, 0.1)',
+                  padding: '0.8rem 1.6rem',
+                  borderRadius: '24px',
+                  fontSize: '0.85rem',
+                  color: 'var(--accent-primary)',
+                  fontWeight: 600,
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(0, 242, 255, 0.2)',
+                  width: 'max-content',
+                  textAlign: 'center',
+                  zIndex: 3
+                }}>
+                  Face Authentication Ready
                 </div>
+              </div>
               )}
 
               <div style={{ flex: '1', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>

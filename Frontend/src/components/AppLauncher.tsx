@@ -78,10 +78,10 @@ export const AppLauncher = ({ isOpen, onClose, user, onLogout, onSelectApp }: {
               {apps.map((app, i) => (
                 <motion.div
                   key={app.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  whileHover={{ scale: 1.1, y: -5 }}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.04 }}
+                  whileHover={{ scale: 1.05, y: -8 }}
                   className="app-item"
                   style={{ cursor: 'pointer' }}
                   onClick={() => {
@@ -90,21 +90,24 @@ export const AppLauncher = ({ isOpen, onClose, user, onLogout, onSelectApp }: {
                   }}
                 >
                   <div style={{
-                    width: '60px',
-                    height: '60px',
-                    margin: '0 auto 0.8rem',
-                    borderRadius: '16px',
-                    background: `linear-gradient(135deg, ${app.color}15, ${app.color}35)`,
-                    border: `1px solid ${app.color}50`,
+                    width: '72px',
+                    height: '72px',
+                    margin: '0 auto 1rem',
+                    borderRadius: '22px',
+                    background: `linear-gradient(135deg, ${app.color}20, ${app.color}35)`,
+                    border: `1px solid ${app.color}30`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: app.color,
-                    boxShadow: `0 8px 16px ${app.color}08`
+                    boxShadow: `0 12px 24px rgba(0,0,0,0.3), 0 0 20px ${app.color}15`,
+                    position: 'relative',
+                    overflow: 'hidden'
                   }}>
+                    <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at center, ${app.color}40, transparent 70%)`, opacity: 0.3 }} />
                     {app.icon}
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>{app.name}</div>
+                  <div style={{ fontSize: '0.9rem', color: 'white', fontWeight: 600, letterSpacing: '0.01em', opacity: 0.8 }}>{app.name}</div>
                 </motion.div>
               ))}
             </div>
