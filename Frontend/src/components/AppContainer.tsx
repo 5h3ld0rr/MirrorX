@@ -1,5 +1,16 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { 
+  X, 
+  Settings, 
+  Calendar, 
+  Clock1, 
+  Music, 
+  Cloud, 
+  Newspaper, 
+  Play, 
+  ShoppingBag, 
+  FileText 
+} from 'lucide-react';
 
 // App Components
 import { CalendarApp } from './apps/CalendarApp';
@@ -49,6 +60,22 @@ export const AppContainer = ({ activeApp, onClose, user, onLogout, onUpdateUser,
     }
   };
 
+  const getAppIcon = (name: string) => {
+    const iconProps = { size: 28, color: '#00f2ff', strokeWidth: 2.5 };
+    switch (name) {
+      case 'Settings': return <Settings {...iconProps} />;
+      case 'Calendar': return <Calendar {...iconProps} />;
+      case 'Clock': return <Clock1 {...iconProps} />;
+      case 'Music': return <Music {...iconProps} />;
+      case 'Weather': return <Cloud {...iconProps} />;
+      case 'News': return <Newspaper {...iconProps} />;
+      case 'Notes': return <FileText {...iconProps} />;
+      case 'UTube': return <Play {...iconProps} />;
+      case 'Fashion': return <ShoppingBag {...iconProps} />;
+      default: return null;
+    }
+  };
+
   return (
     <AnimatePresence>
       {activeApp && (
@@ -79,15 +106,21 @@ export const AppContainer = ({ activeApp, onClose, user, onLogout, onUpdateUser,
             borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
             background: 'rgba(0, 0, 0, 0.2)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
               <div style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                background: 'var(--accent-primary)',
-                boxShadow: '0 0 10px var(--accent-primary)'
-              }} />
-              <span style={{ fontSize: '1rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                filter: 'drop-shadow(0 0 8px rgba(0, 242, 255, 0.4))'
+              }}>
+                {getAppIcon(activeApp)}
+              </div>
+              <span style={{ 
+                fontSize: '2rem', 
+                fontWeight: 700, 
+                color: 'white',
+                letterSpacing: '-0.02em'
+              }}>
                 {activeApp}
               </span>
             </div>

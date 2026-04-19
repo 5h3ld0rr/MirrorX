@@ -12,10 +12,7 @@ export const NotesApp = () => {
   return (
     <div className="app-content" style={{ padding: '2rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <FileText size={32} color="var(--accent-primary)" />
-          My Notes
-        </h2>
+        <div />
         <div style={{ display: 'flex', gap: '1rem', width: '300px' }}>
           <div style={{ 
             position: 'relative', 

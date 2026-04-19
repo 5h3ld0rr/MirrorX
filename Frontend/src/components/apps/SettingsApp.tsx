@@ -831,10 +831,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
     <div className="app-content" style={{ display: 'flex', height: '100%', background: 'linear-gradient(135deg, rgba(0,0,0,0.8), rgba(20,20,30,0.4))' }}>
       {/* Sidebar */}
       <div style={{ width: '320px', padding: '3rem 2rem', borderRight: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(20px)' }}>
-        <h2 style={{ fontSize: '2rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '3.5rem', letterSpacing: '-0.03em' }}>
-          <Settings size={32} color="var(--accent-primary)" />
-          Settings
-        </h2>
+        <div style={{ height: '1.5rem' }} />
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
           {sections.map((section) => (

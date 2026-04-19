@@ -12,10 +12,7 @@ export const NewsApp = () => {
   return (
     <div className="app-content" style={{ padding: '2rem 4rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
-        <h2 style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <Newspaper size={32} color="var(--accent-primary)" />
-          Mirror News
-        </h2>
+        <div />
         <div style={{ display: 'flex', gap: '1rem', width: '300px' }}>
              <button className="glass-panel" style={{ padding: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', background: 'rgba(0, 242, 255, 0.1)', color: 'var(--accent-primary)' }}>
                 Top Stories
