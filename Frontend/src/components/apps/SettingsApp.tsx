@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Settings, User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap } from 'lucide-react';
+import { Settings, User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap, Moon, Timer, MessageSquare, BookOpen, Cpu, FileText, ExternalLink, X, Send, Bot } from 'lucide-react';
 import { updateProfile, updateProfilePicture } from '../../lib/api';
+import { CONFIG } from '../../config';
 
 export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleConnecting, bleDeviceName, bleCharacteristic, connectBLE, disconnectBLE }: { 
   user: any, 
@@ -45,8 +46,17 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
   const [ledPower, setLedPower] = useState(true);
   const [rgbHue, setRgbHue] = useState(0);
   const [rgbSat] = useState(100);
+  const [standbyDelay, setStandbyDelay] = useState(user.standbyDelay || CONFIG.STANDBY_DELAY);
+  const [logoutDelay, setLogoutDelay] = useState(user.logoutDelay || CONFIG.TERMINATION_DELAY);
   const colorWheelRef = useRef<HTMLCanvasElement>(null);
   const saveTimerRef = useRef<any>(null);
+
+  // Chat State
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessage, setChatMessage] = useState('');
+  const [chatHistory, setChatHistory] = useState([
+    { role: 'assistant', content: "Hello! I'm the MirrorX Virtual Assistant. How can I help you today?" }
+  ]);
 
   // Save RGB settings to Firestore (debounced)
   const saveRgbToCloud = useCallback((color: { r: number, g: number, b: number }, bright: number) => {
@@ -81,6 +91,18 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
         onUpdateUser({ accentColor: color });
       } catch (err) {
         console.error('Failed to save accent color:', err);
+      }
+    }, 800);
+  }, [onUpdateUser]);
+
+  const saveSecuritySettingsToCloud = useCallback((standby: number, logout: number) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await updateProfile({ standbyDelay: standby, logoutDelay: logout });
+        onUpdateUser({ standbyDelay: standby, logoutDelay: logout });
+      } catch (err) {
+        console.error('Failed to save security settings:', err);
       }
     }, 800);
   }, [onUpdateUser]);
@@ -506,34 +528,142 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
              </div>
           </div>
         );
-      case 'Security':
+      case 'Security': {
+        const standbyOptions = [
+          { label: '5 seconds', value: 5000 },
+          { label: '15 seconds', value: 15000 },
+          { label: '30 seconds', value: 30000 },
+          { label: '1 minute', value: 60000 },
+          { label: '2 minutes', value: 120000 },
+          { label: '5 minutes', value: 300000 },
+          { label: 'Never', value: 2147483647 },
+        ];
+
+        const logoutOptions = [
+          { label: '1 minute', value: 60000 },
+          { label: '2 minutes', value: 120000 },
+          { label: '5 minutes', value: 300000 },
+          { label: '10 minutes', value: 600000 },
+          { label: '30 minutes', value: 1800000 },
+          { label: 'Never', value: 2147483647 },
+        ];
+
+        const SettingRow = ({ title, subtitle, icon: Icon, value, options, onChange }: any) => (
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            padding: '1.25rem 1.5rem',
+            background: 'rgba(255, 255, 255, 0.02)',
+            borderRadius: '12px',
+            marginBottom: '0.5rem',
+            border: '1px solid rgba(255, 255, 255, 0.05)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+              <div style={{ 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '10px', 
+                background: 'rgba(255, 255, 255, 0.05)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Icon size={20} color="var(--accent-primary)" />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <span style={{ fontSize: '1.05rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>{title}</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{subtitle}</span>
+              </div>
+            </div>
+            <select
+              value={value}
+              onChange={(e) => onChange(parseInt(e.target.value))}
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: 'white',
+                padding: '0.6rem 1rem',
+                borderRadius: '8px',
+                fontSize: '0.9rem',
+                outline: 'none',
+                cursor: 'pointer',
+                minWidth: '140px',
+                appearance: 'none',
+                backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E")',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 1rem center',
+                paddingRight: '2.5rem'
+              }}
+            >
+              {options.map((opt: any) => (
+                <option key={opt.value} value={opt.value} style={{ background: '#1a1a1a', color: 'white' }}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        );
+
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-             <h2 style={{ fontSize: '2rem', fontWeight: 600 }}>Security & Privacy</h2>
+             <header style={{ marginBottom: '1rem' }}>
+               <h2 style={{ fontSize: '2.2rem', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Security & Privacy</h2>
+               <p style={{ color: 'var(--text-muted)' }}>Manage how MirrorX handles your presence and data.</p>
+             </header>
+
              <div className="glass-panel" style={{ padding: '2rem', borderRadius: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', marginBottom: '1rem' }}>
-                  <div style={{ padding: '0.8rem', background: 'rgba(0, 242, 255, 0.1)', borderRadius: '12px' }}>
-                    <Lock size={24} color="var(--accent-primary)" />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                     <h4 style={{ marginBottom: '0.2rem' }}>Two-Factor Authentication</h4>
-                     <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Current Status: <span style={{ color: '#4ade80' }}>Active</span></p>
-                  </div>
-                  <ChevronRight size={20} color="var(--text-muted)" />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem', paddingLeft: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Screen & Sleep</h3>
+                
+                <SettingRow 
+                  title="Turn my screen off after"
+                  subtitle="Dims the display to save energy when no motion is detected"
+                  icon={Moon}
+                  value={standbyDelay}
+                  options={standbyOptions}
+                  onChange={(val: number) => {
+                    setStandbyDelay(val);
+                    saveSecuritySettingsToCloud(val, logoutDelay);
+                  }}
+                />
+
+                <SettingRow 
+                  title="Make my device log out after"
+                  subtitle="Terminates your session automatically for security"
+                  icon={Timer}
+                  value={logoutDelay}
+                  options={logoutOptions}
+                  onChange={(val: number) => {
+                    setLogoutDelay(val);
+                    saveSecuritySettingsToCloud(standbyDelay, val);
+                  }}
+                />
+
+                <div style={{ marginTop: '2.5rem', padding: '1.5rem', background: 'rgba(255, 61, 61, 0.03)', borderRadius: '16px', border: '1px solid rgba(255, 61, 61, 0.08)', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                   <div style={{ padding: '0.8rem', background: 'rgba(255, 61, 61, 0.1)', borderRadius: '12px' }}>
                     <Shield size={24} color="#ff4d4d" />
                   </div>
                   <div style={{ flex: 1 }}>
-                     <h4 style={{ marginBottom: '0.2rem' }}>Biometric Data History</h4>
-                     <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Manage your stored facial recognition descriptors.</p>
+                     <h4 style={{ marginBottom: '0.1rem', fontSize: '1.05rem' }}>Identity Protection</h4>
+                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Your biometric descriptors are encrypted and never leave the device hardware.</p>
                   </div>
-                  <ChevronRight size={20} color="var(--text-muted)" />
                 </div>
              </div>
+
+             <div className="glass-panel" style={{ padding: '1.5rem 2rem', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Lock size={20} color="var(--text-muted)" />
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: '1.05rem', fontWeight: 500 }}>Biometric Data History</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>View and manage enrolled faces</p>
+                  </div>
+                </div>
+                <ChevronRight size={20} color="var(--text-muted)" />
+             </div>
           </div>
-        )
+        );
+      }
+
       case 'RGB Controller':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -822,6 +952,77 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
             </div>
           </div>
         );
+      case 'Help & Support':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+             <header>
+               <h2 style={{ fontSize: '2.2rem', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Help & Support</h2>
+               <p style={{ color: 'var(--text-muted)' }}>Get expert assistance and master your MirrorX experience.</p>
+             </header>
+
+             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 400px)', justifyContent: 'center', gap: '1.5rem' }}>
+                {[
+                  { 
+                    icon: MessageSquare, 
+                    title: 'Live Chat', 
+                    desc: 'Instant support', 
+                    color: 'var(--accent-primary)',
+                    onClick: () => setShowChat(true)
+                  },
+                ].map((item, idx) => (
+                  <div key={idx} className="glass-panel" 
+                    onClick={item.onClick}
+                    style={{ padding: '2rem', borderRadius: '24px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s ease' }}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  >
+                    <div style={{ width: '60px', height: '60px', borderRadius: '18px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                      <item.icon size={30} color={item.color} />
+                    </div>
+                    <h4 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{item.title}</h4>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{item.desc}</p>
+                  </div>
+                ))}
+             </div>
+
+             <div className="glass-panel" style={{ padding: '2.5rem', borderRadius: '24px' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <FileText size={20} color="var(--accent-primary)" />
+                  Common Questions
+                </h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                   {[
+                     { q: 'How do I bridge the Bluetooth connection?', a: 'Power on your ELK LED strip and ensure no other device is paired. Navigate to the RGB Controller tab and tap Connect.' },
+                     { q: 'Can I add multiple user identities?', a: 'MirrorX currently supports a single primary workspace per device. Multi-user switching is planned for a future firmware update.' },
+                     { q: 'Where is my biometric data stored?', a: 'Descriptors are stored within the hardware secure element and are never uploaded to the cloud server.' }
+                   ].map((faq, idx) => (
+                     <div key={idx} style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <h4 style={{ color: 'var(--accent-primary)', fontSize: '0.95rem', marginBottom: '0.75rem', fontWeight: 600 }}>Q: {faq.q}</h4>
+                        <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>{faq.a}</p>
+                     </div>
+                   ))}
+                </div>
+             </div>
+
+             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <Cpu size={24} color="var(--text-muted)" />
+                <div style={{ flex: 1 }}>
+                   <div style={{ display: 'flex', gap: '2rem' }}>
+                      <div>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>System Version</p>
+                        <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>v2.4.0 (Enterprise)</p>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>Build</p>
+                        <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>2024.Q2.MIRROR</p>
+                      </div>
+                   </div>
+                </div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>MirrorX Neural Core © 2024</div>
+             </div>
+          </div>
+        );
       default:
         return <div style={{ opacity: 0.5, textAlign: 'center', marginTop: '10rem' }}>Section under development</div>;
     }
@@ -887,6 +1088,78 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
           {renderSectionContent()}
         </div>
       </div>
+
+      {/* Live Chat Modal */}
+      {showChat && (
+        <div style={{ position: 'fixed', bottom: '30px', right: '30px', width: '380px', height: '550px', zIndex: 9999, display: 'flex', flexDirection: 'column' }} className="glass-panel">
+           <div style={{ padding: '1.5rem', background: 'var(--accent-primary)', color: 'black', borderRadius: '24px 24px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                 <div style={{ position: 'relative' }}>
+                    <Bot size={24} />
+                    <div style={{ position: 'absolute', bottom: -2, right: -2, width: 8, height: 8, background: '#10b981', borderRadius: '50%', border: '2px solid black' }} />
+                 </div>
+                 <div>
+                    <h4 style={{ fontSize: '1rem', fontWeight: 600 }}>MirrorX Assistant</h4>
+                    <p style={{ fontSize: '0.7rem', opacity: 0.8 }}>Online & ready to help</p>
+                 </div>
+              </div>
+              <button onClick={() => setShowChat(false)} style={{ background: 'rgba(0,0,0,0.1)', border: 'none', cursor: 'pointer', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <X size={18} />
+              </button>
+           </div>
+           
+           <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(0,0,0,0.2)' }}>
+              {chatHistory.map((chat, idx) => (
+                <div key={idx} style={{ 
+                  alignSelf: chat.role === 'user' ? 'flex-end' : 'flex-start',
+                  maxWidth: '80%',
+                  padding: '1rem',
+                  borderRadius: chat.role === 'user' ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
+                  background: chat.role === 'user' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)',
+                  color: chat.role === 'user' ? 'black' : 'white',
+                  fontSize: '0.9rem',
+                  lineHeight: 1.5,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                }}>
+                   {chat.content}
+                </div>
+              ))}
+           </div>
+
+           <div style={{ padding: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '0.8rem' }}>
+              <input 
+                type="text" 
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && chatMessage.trim()) {
+                    const newHist = [...chatHistory, { role: 'user', content: chatMessage }];
+                    setChatHistory(newHist);
+                    setChatMessage('');
+                    setTimeout(() => {
+                      setChatHistory([...newHist, { role: 'assistant', content: "Our support systems are currently undergoing a high-frequency neural calibration. A specialist will be with you shortly. Thank you for your patience." }]);
+                    }, 1000);
+                  }
+                }}
+                placeholder="Type your message..."
+                style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0.8rem 1rem', color: 'white', outline: 'none' }}
+              />
+              <button 
+                onClick={() => {
+                  if (!chatMessage.trim()) return;
+                  const newHist = [...chatHistory, { role: 'user', content: chatMessage }];
+                  setChatHistory(newHist);
+                  setChatMessage('');
+                  setTimeout(() => {
+                    setChatHistory([...newHist, { role: 'assistant', content: "Our support systems are currently undergoing a high-frequency neural calibration. A specialist will be with you shortly. Thank you for your patience." }]);
+                  }, 1000);
+                }}
+                style={{ background: 'var(--accent-primary)', border: 'none', borderRadius: '12px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'black' }}>
+                 <Send size={20} />
+              </button>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
