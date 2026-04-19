@@ -156,33 +156,7 @@ function App() {
         <GlobalPlayer />
         <MusicWidget isIdle={!hasInteracted && !isAuthModalOpen && !showWelcome} />
         <div className="top-bar" style={{ justifyContent: 'flex-end' }}>
-          <ReminderWidget user={user} isActive={hasInteracted || isAuthModalOpen} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ 
-              width: '32px', 
-              height: '32px', 
-              borderRadius: '50%', 
-              background: user?.photoURL ? `url(${user.photoURL})` : 'linear-gradient(135deg, var(--accent-primary), #0088ff)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'black',
-              fontSize: '0.9rem',
-              fontWeight: 700,
-              border: '1px solid rgba(255,255,255,0.1)',
-              overflow: 'hidden'
-            }}>
-              {user?.photoURL ? (
-                <img src={user.photoURL} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                user?.name?.[0].toUpperCase() || 'U'
-              )}
-            </div>
-            <span style={{ fontSize: '1rem', color: 'white', fontWeight: 500, letterSpacing: '0.05em' }}>
-              {user?.name?.toLowerCase() || 'mirrorx'}
-            </span>
-          </div>
+          <ReminderWidget user={user} isActive={hasInteracted || isAuthModalOpen} />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
             <Clock />
             <Weather isActive={hasInteracted || isAuthModalOpen} />

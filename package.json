@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "MirrorX Full Stack Control",
   "scripts": {
-    "dev": "pm2 start ecosystem.config.js --env dev",
+    "dev": "pm2 start ecosystem.config.js --env dev && pm2 logs",
     "start": "npm run build --workspaces && pm2 start ecosystem.config.js",
     "stop": "pm2 stop all",
     "restart": "pm2 restart all",
