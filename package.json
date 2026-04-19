@@ -3,14 +3,12 @@
   "version": "1.0.0",
   "description": "MirrorX Full Stack Control",
   "scripts": {
+    "build": "npm run build --prefix Backend && npm run build --prefix Frontend",
+    "install-all": "npm install --prefix Backend && npm install --prefix Frontend",
     "dev": "pm2 start ecosystem.config.js --env dev && pm2 logs",
-    "start": "npm run build --workspaces && pm2 start ecosystem.config.js",
+    "start": "npm run build && pm2 start ecosystem.config.js",
     "stop": "pm2 delete all",
     "restart": "pm2 restart all",
     "logs": "pm2 logs"
-  },
-  "workspaces": [
-    "Frontend",
-    "Backend"
-  ]
+  }
 }
