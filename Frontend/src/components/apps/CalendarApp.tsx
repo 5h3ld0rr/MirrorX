@@ -1,22 +1,135 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Star, Plus, X, Trash2, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
+import { ChevronLeft, ChevronRight, Star, X, Trash2 } from 'lucide-react';
 import axios from 'axios';
+import { db } from '../../lib/firebase';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 const GOOGLE_CAL_ID = 'en.lk#holiday@group.v.calendar.google.com';
 const GOOGLE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY;
 
-export const CalendarApp = () => {
+const WheelItem = ({ value, index, y, itemHeight, isInfinite, totalOptions }: { value: string, index: number, y: any, itemHeight: number, isInfinite: boolean, totalOptions: number }) => {
+  const itemY = index * itemHeight;
+  const wrapRange = totalOptions * itemHeight;
+
+  const translateY = useTransform(y, (latest: number) => {
+    if (!isInfinite) return 0;
+    const rawPos = latest + itemY;
+    const wraps = Math.floor((rawPos + wrapRange / 2) / wrapRange);
+    return -wraps * wrapRange;
+  });
+
+  const distanceFromCenter = useTransform(y, (latest: number) => {
+    const rawPos = latest + itemY;
+    if (!isInfinite) return rawPos;
+    const wraps = Math.floor((rawPos + wrapRange / 2) / wrapRange);
+    return rawPos - wraps * wrapRange;
+  });
+
+  const rotateX = useTransform(distanceFromCenter, [-itemHeight * 3, 0, itemHeight * 3], [70, 0, -70]);
+  const opacity = useTransform(distanceFromCenter, [-itemHeight * 2.5, -itemHeight, 0, itemHeight, itemHeight * 2.5], [0.1, 0.4, 1, 0.4, 0.1]);
+  const scale = useTransform(distanceFromCenter, [-itemHeight * 2, 0, itemHeight * 2], [0.7, 1.35, 0.7]);
+  const color = useTransform(distanceFromCenter, [-itemHeight * 0.5, 0, itemHeight * 0.5], ['rgba(255,255,255,0.4)', '#00f2ff', 'rgba(255,255,255,0.4)']);
+
+  return (
+    <motion.div
+      style={{
+        position: 'absolute',
+        top: `${itemY + 82.5}px`,
+        y: translateY,
+        height: `${itemHeight}px`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '2rem',
+        fontWeight: 800,
+        width: '100%',
+        rotateX,
+        opacity,
+        scale,
+        color,
+        userSelect: 'none',
+        perspective: '1200px',
+        transformStyle: 'preserve-3d'
+      }}
+    >
+      {value}
+    </motion.div>
+  );
+};
+
+const ScrollWheel = ({ options, value, onChange, width = '80px', isInfinite = false }: { options: string[], value: string, onChange: (val: string) => void, width?: string, isInfinite?: boolean }) => {
+  const itemHeight = 65; 
+  
+  const initialIndex = options.indexOf(value);
+  const y = useMotionValue(-initialIndex * itemHeight);
+
+  // Sync prop changes
+  useEffect(() => {
+    const idxInOriginal = options.indexOf(value);
+    const currentY = y.get();
+    const currentAbsoluteIdx = Math.round(-currentY / itemHeight);
+    const currentRelativeIdx = ((currentAbsoluteIdx % options.length) + options.length) % options.length;
+    
+    if (idxInOriginal !== currentRelativeIdx && idxInOriginal !== -1) {
+      y.set(-idxInOriginal * itemHeight);
+    }
+  }, [value, options, y]);
+
+  const handleDragEnd = (_: any, info: any) => {
+    const currentY = y.get();
+    const velocity = info.velocity.y;
+    const projectedY = currentY + velocity * 0.15;
+    
+    let newIndex = Math.round(-projectedY / itemHeight);
+    if (!isInfinite) {
+      newIndex = Math.max(0, Math.min(newIndex, options.length - 1));
+    }
+    
+    animate(y, -newIndex * itemHeight, { type: 'spring', stiffness: 450, damping: 45, mass: 0.8 });
+    
+    const wrappedIndex = ((newIndex % options.length) + options.length) % options.length;
+    onChange(options[wrappedIndex]);
+  };
+
+  return (
+    <div style={{ position: 'relative', height: '230px', width, overflow: 'hidden', display: 'flex', justifyContent: 'center', cursor: 'grab', touchAction: 'none' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '60px', background: 'linear-gradient(to bottom, rgba(0,0,0,0.9), transparent)', zIndex: 3, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60px', background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', zIndex: 3, pointerEvents: 'none' }} />
+
+      <div style={{ 
+        position: 'absolute', top: '82.5px', left: '4px', right: '4px', height: '65px', 
+        background: 'rgba(255, 255, 255, 0.08)', borderRadius: '18px', 
+        border: '1px solid rgba(255, 255, 255, 0.2)', pointerEvents: 'none', zIndex: 2,
+        boxShadow: '0 12px 40px rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)'
+      }} />
+
+      <motion.div
+        drag="y"
+        dragConstraints={isInfinite ? undefined : { top: -(options.length - 1) * itemHeight, bottom: 0 }}
+        dragElastic={0.15}
+        onDragEnd={handleDragEnd}
+        style={{ y, width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 1, transformStyle: 'preserve-3d' }}
+      >
+        {isInfinite && <div style={{ position: 'absolute', height: '2000000px', width: '100%', top: '-1000000px' }} />}
+        {!isInfinite && <div style={{ position: 'absolute', height: `${options.length * itemHeight + 165}px`, width: '100%', top: 0 }} />}
+        
+        {options.map((opt, i) => (
+          <WheelItem key={`${opt}-${i}`} value={opt} index={i} y={y} itemHeight={itemHeight} isInfinite={isInfinite} totalOptions={options.length} />
+        ))}
+      </motion.div>
+    </div>
+  );
+};
+
+export const CalendarApp = ({ user }: { user: any }) => {
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [holidays, setHolidays] = useState<Record<string, { name: string, type: 'buddhist'|'christian'|'hindu'|'muslim'|'national' }>>({});
-  const [userEvents, setUserEvents] = useState<Record<string, string[]>>(() => {
-    const saved = localStorage.getItem('mirrorx_user_events');
-    return saved ? JSON.parse(saved) : {};
-  });
+  const [userEvents, setUserEvents] = useState<Record<string, { text: string, time: string }[]>>({});
   const [showModal, setShowModal] = useState(false);
   const [eventInput, setEventInput] = useState('');
-  const [showSavedToast, setShowSavedToast] = useState(false);
+  const [timeInput, setTimeInput] = useState('12:00');
   const [isLoading, setIsLoading] = useState(false);
   
   const today = new Date();
@@ -56,11 +169,25 @@ export const CalendarApp = () => {
       }
     };
     fetchHolidaysFromGoogle();
-  }, [year]); // Refetch if year changes
+  }, [year]);
 
   useEffect(() => {
-    localStorage.setItem('mirrorx_user_events', JSON.stringify(userEvents));
-  }, [userEvents]);
+    if (!user?.uid) return;
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUserEvents(data.calendarEvents || {});
+      } else {
+        setUserEvents({});
+      }
+    }, (err) => {
+      console.error("Calendar Firestore Error:", err);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
 
   const getDaysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
   const getFirstDayOfMonth = (y: number, m: number) => new Date(y, m, 1).getDay();
@@ -93,86 +220,177 @@ export const CalendarApp = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showModal]);
 
-  const addEvent = () => {
-    if (!eventInput.trim() || !selectedDate) return;
-    setUserEvents(prev => ({
-      ...prev,
-      [selectedDate]: [...(prev[selectedDate] || []), eventInput.trim()]
-    }));
-    setEventInput('');
-    setShowSavedToast(true);
-    setTimeout(() => setShowSavedToast(false), 2000);
-  };
+  const addEvent = async () => {
+    if (!eventInput.trim() || !selectedDate || !user?.uid) return;
+    
+    const newEvents = {
+      ...userEvents,
+      [selectedDate]: [...(userEvents[selectedDate] || []), { text: eventInput.trim(), time: timeInput }]
+    };
 
-  const deleteEvent = (dateStr: string, index: number) => {
-    setUserEvents(prev => {
-      const updated = [...(prev[dateStr] || [])];
-      updated.splice(index, 1);
-      if (updated.length === 0) {
-        const newState = { ...prev };
-        delete newState[dateStr];
-        return newState;
-      }
-      return { ...prev, [dateStr]: updated };
-    });
-  };
-
-  const totalDays = getDaysInMonth(year, viewDate.getMonth());
-  const firstDayIndex = getFirstDayOfMonth(year, viewDate.getMonth());
-  const blanks = Array.from({ length: firstDayIndex });
-  const dayNumbers = Array.from({ length: totalDays }, (_, i) => i + 1);
-
-  const getDayTypeColor = (type?: string) => {
-    switch(type) {
-      case 'buddhist': return '#fcc419';
-      case 'christian': return '#ae3ec9';
-      case 'hindu': return '#fd7e14';
-      case 'muslim': return '#40c057';
-      default: return 'var(--accent-primary)';
+    try {
+      await setDoc(doc(db, 'users', user.uid), { calendarEvents: newEvents }, { merge: true });
+      setEventInput('');
+    } catch (error) {
+      console.error("Firestore Save Error:", error);
     }
+  };
+
+  const deleteEvent = async (dateStr: string, index: number) => {
+    if (!user?.uid) return;
+    
+    const updated = [...(userEvents[dateStr] || [])];
+    updated.splice(index, 1);
+    
+    const newEvents = { ...userEvents };
+    if (updated.length === 0) {
+      delete newEvents[dateStr];
+    } else {
+      newEvents[dateStr] = updated;
+    }
+
+    try {
+      await setDoc(doc(db, 'users', user.uid), { calendarEvents: newEvents }, { merge: true });
+    } catch (error) {
+      console.error("Firestore Delete Error:", error);
+    }
+  };
+
+  const [pickerH, setPickerH] = useState('12');
+  const [pickerM, setPickerM] = useState('00');
+  const [pickerP, setPickerP] = useState('AM');
+
+  useEffect(() => {
+    const [h, m] = timeInput.split(':').map(Number);
+    const p = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    setPickerH(h12.toString());
+    setPickerM(m.toString().padStart(2, '0'));
+    setPickerP(p);
+  }, [timeInput]);
+
+  const updateFromPicker = (newH: string, newM: string, newP: string) => {
+    let h = parseInt(newH);
+    if (newP === 'PM' && h < 12) h += 12;
+    if (newP === 'AM' && h === 12) h = 0;
+    const formatted = `${h.toString().padStart(2, '0')}:${newM}`;
+    setTimeInput(formatted);
   };
 
   return (
     <div className="app-content" style={{ padding: '2.5rem', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-      {/* Navigation & Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
         <div>
-          <h2 style={{ fontSize: '3rem', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>{monthName} {year}</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', color: 'var(--text-muted)', fontSize: '1rem', marginTop: '0.4rem' }}>
-            <CalendarIcon size={20} />
-            <span>Sri Lanka {year} Calendar (Google Live)</span>
-          </div>
+          <h2 style={{ 
+            fontSize: '3.5rem', 
+            fontWeight: 900, 
+            margin: 0, 
+            letterSpacing: '-0.04em',
+            background: 'linear-gradient(to bottom, #ffffff 0%, #a0a0a0 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '1rem'
+          }}>
+            {monthName} <span style={{ opacity: 0.3, fontWeight: 300, fontSize: '0.8em' }}>{year}</span>
+          </h2>
+          {isLoading && (
+            <div style={{ marginTop: '0.4rem' }}>
+              <motion.div 
+                animate={{ rotate: 360 }} 
+                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%' }}
+              />
+            </div>
+          )}
         </div>
-        
-        <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
+        <div style={{ 
+          display: 'flex', 
+          gap: '0.4rem', 
+          alignItems: 'center', 
+          background: 'rgba(255, 255, 255, 0.05)', 
+          padding: '4px', 
+          borderRadius: '24px', 
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+        }}>
           <motion.button 
-            whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.08)' }}
-            whileTap={{ scale: 0.95 }}
-            className="glass-panel" 
+            whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--accent-primary)' }} 
+            whileTap={{ scale: 0.9 }} 
             onClick={handlePrevMonth} 
-            style={{ width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+            style={{ 
+              width: '40px', 
+              height: '40px', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              cursor: 'pointer', 
+              background: 'transparent', 
+              border: 'none', 
+              color: '#ffffff',
+              transition: 'all 0.2s ease'
+            }}
           >
-            <ChevronLeft size={32} />
+            <ChevronLeft size={20} />
           </motion.button>
+          
+          <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.15)' }} />
+          
           <motion.button 
-            whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.08)' }}
-            whileTap={{ scale: 0.95 }}
-            className="glass-panel" 
+            whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--accent-primary)' }} 
+            whileTap={{ scale: 0.9 }} 
             onClick={handleNextMonth} 
-            style={{ width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+            style={{ 
+              width: '40px', 
+              height: '40px', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              cursor: 'pointer', 
+              background: 'transparent', 
+              border: 'none', 
+              color: '#ffffff',
+              transition: 'all 0.2s ease'
+            }}
           >
-            <ChevronRight size={32} />
+            <ChevronRight size={20} />
           </motion.button>
         </div>
       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.75rem', height: '100%', gridTemplateRows: 'auto repeat(6, 1fr)' }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(7, 1fr)', 
+          gap: '1rem', 
+          height: '100%', 
+          gridTemplateRows: 'auto repeat(6, 1fr)',
+          perspective: '1000px'
+        }}>
           {days.map(day => (
-            <div key={day} style={{ color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.9rem', textAlign: 'center', paddingBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{day}</div>
+            <div key={day} style={{ 
+              color: 'var(--text-muted)', 
+              fontWeight: 800, 
+              fontSize: '0.85rem', 
+              textAlign: 'center', 
+              paddingBottom: '1rem', 
+              textTransform: 'uppercase', 
+              letterSpacing: '0.2em',
+              opacity: 0.6
+            }}>
+              {day}
+            </div>
           ))}
-          {blanks.map((_, i) => <div key={`blank-${i}`} />)}
-          {dayNumbers.map(dayNum => {
+          
+          {Array.from({ length: getFirstDayOfMonth(year, viewDate.getMonth()) }).map((_, i) => (
+            <div key={`blank-${i}`} style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '16px', margin: '2px', opacity: 0.3 }} />
+          ))}
+
+          {Array.from({ length: getDaysInMonth(year, viewDate.getMonth()) }, (_, i) => i + 1).map(dayNum => {
             const m = viewDate.getMonth() + 1;
             const dStr = `${year}-${String(m).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
             const holiday = holidays[dStr];
@@ -182,106 +400,240 @@ export const CalendarApp = () => {
             return (
               <motion.button
                 key={dayNum}
-                whileHover={{ y: -4, background: 'rgba(255,255,255,0.06)' }}
+                whileHover={{ 
+                  y: -6, 
+                  scale: 1.02,
+                  background: isToday ? 'var(--accent-primary)' : 'rgba(255,255,255,0.08)',
+                  boxShadow: isToday ? '0 20px 40px rgba(0, 242, 255, 0.4)' : '0 20px 40px rgba(0,0,0,0.3)',
+                  zIndex: 10
+                }}
                 onClick={() => { setSelectedDate(dStr); setShowModal(true); }}
                 style={{ 
-                  textAlign: 'left', padding: '0.8rem', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.05)',
-                  background: isToday ? 'var(--accent-primary)' : holiday ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.01)',
-                  color: isToday ? 'black' : 'white', cursor: 'pointer', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '4px'
+                  textAlign: 'left', 
+                  padding: '1rem', 
+                  borderRadius: '24px', 
+                  border: isToday ? '2px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.06)',
+                  background: isToday 
+                    ? 'linear-gradient(135deg, var(--accent-primary) 0%, #00d2ff 100%)' 
+                    : holiday 
+                      ? 'rgba(255, 255, 255, 0.04)' 
+                      : 'rgba(255, 255, 255, 0.02)',
+                  boxShadow: isToday ? '0 0 30px rgba(0, 242, 255, 0.2)' : 'none',
+                  color: isToday ? 'black' : 'white', 
+                  cursor: 'pointer', 
+                  position: 'relative', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '6px',
+                  transition: 'border 0.2s ease, background 0.2s ease',
+                  minHeight: '120px'
                 }}
               >
-                <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{dayNum}</div>
-                
-                {/* Holiday Name */}
+                {/* Background Glow for Today */}
+                {isToday && (
+                  <motion.div
+                    animate={{ opacity: [0.4, 0.7, 0.4] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    style={{
+                      position: 'absolute', inset: 0, 
+                      background: 'radial-gradient(circle at center, white, transparent 70%)',
+                      mixBlendMode: 'overlay', pointerEvents: 'none'
+                    }}
+                  />
+                )}
+
+                <div style={{ 
+                  fontSize: '1.8rem', 
+                  fontWeight: 900, 
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: '-0.05em',
+                  opacity: isToday ? 1 : 0.9,
+                  lineHeight: 1
+                }}>
+                  {dayNum}
+                </div>
+
                 {holiday && (
-                  <div style={{ fontSize: '0.65rem', color: isToday ? 'black' : getDayTypeColor(holiday.type), fontWeight: 700, lineHeight: 1.2 }}>
+                  <div style={{ 
+                    fontSize: '0.7rem', 
+                    color: isToday ? 'rgba(0,0,0,0.8)' : getDayTypeColor(holiday.type), 
+                    fontWeight: 800, 
+                    lineHeight: 1.3,
+                    background: isToday ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.03)',
+                    padding: '4px 8px',
+                    borderRadius: '8px',
+                    width: 'fit-content'
+                  }}>
                     {holiday.name}
                   </div>
                 )}
 
-                {/* Custom Event Names */}
                 {customE.length > 0 && (
-                  <div style={{ marginTop: '4px', width: '100%', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    {customE.slice(0, 2).map((evt, idx) => (
+                  <div style={{ marginTop: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {customE.slice(0, 1).map((evt, idx) => (
                       <div key={idx} style={{ 
-                        fontSize: '0.6rem', 
-                        background: isToday ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)',
-                        padding: '2px 6px', 
-                        borderRadius: '6px', 
+                        fontSize: '0.7rem', 
+                        background: isToday ? 'rgba(0,0,0,0.1)' : 'rgba(0, 242, 255, 0.1)', 
+                        padding: '4px 8px', 
+                        borderRadius: '10px', 
                         overflow: 'hidden', 
                         textOverflow: 'ellipsis', 
-                        whiteSpace: 'nowrap',
-                        color: isToday ? 'black' : 'white',
-                        fontWeight: 500
+                        whiteSpace: 'nowrap', 
+                        color: isToday ? 'black' : 'var(--accent-primary)', 
+                        fontWeight: 700,
+                        border: isToday ? '1px solid rgba(0,0,0,0.1)' : '1px solid rgba(0, 242, 255, 0.2)'
                       }}>
-                        {evt}
+                        {evt.text}
                       </div>
                     ))}
-                    {customE.length > 2 && (
-                      <div style={{ fontSize: '0.55rem', opacity: 0.6, fontWeight: 700, paddingLeft: '4px' }}>
-                        + {customE.length - 2} more
+                    {customE.length > 1 && (
+                      <div style={{ fontSize: '0.65rem', opacity: 0.5, fontWeight: 700, paddingLeft: '4px' }}>
+                        + {customE.length - 1} more
                       </div>
                     )}
                   </div>
                 )}
 
-                {holiday && <Star size={10} style={{ position: 'absolute', top: '10px', right: '10px', opacity: 0.5 }} />}
+                {holiday && (
+                  <Star 
+                    size={14} 
+                    fill={isToday ? 'black' : getDayTypeColor(holiday.type)}
+                    style={{ 
+                      position: 'absolute', top: '1rem', right: '1rem', 
+                      opacity: isToday ? 0.3 : 0.6,
+                      color: isToday ? 'black' : getDayTypeColor(holiday.type)
+                    }} 
+                  />
+                )}
               </motion.button>
             );
           })}
         </div>
       </div>
 
-      {/* Persistence Modal */}
       <AnimatePresence>
         {showModal && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(15px)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(20px)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}
           >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 30 }}
               className="glass-panel"
-              style={{ width: '100%', maxWidth: '450px', padding: '2rem', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', position: 'relative' }}
+              style={{ 
+                width: '100%', 
+                maxWidth: '680px', 
+                padding: '2.5rem', 
+                border: '1px solid rgba(255,255,255,0.12)', 
+                boxShadow: '0 40px 100px rgba(0,0,0,0.8)', 
+                position: 'relative', 
+                borderRadius: '40px',
+                background: 'rgba(10, 10, 10, 0.85)',
+                backdropFilter: 'blur(30px) saturate(180%)'
+              }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
                 <div>
-                  <h3 style={{ margin: 0 }}>Add Event</h3>
-                  <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.9rem', opacity: 0.6 }}>{selectedDate}</p>
+                  <h3 style={{ margin: 0, fontSize: '2.4rem', fontWeight: 700, letterSpacing: '-0.03em', background: 'linear-gradient(to bottom, #fff, #aaa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Schedule</h3>
+                  <p style={{ margin: '0.4rem 0 0 0', fontSize: '1.1rem', opacity: 0.5, fontWeight: 500, fontFamily: 'var(--font-mono)' }}>{new Date(selectedDate!).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
                 </div>
-                <button onClick={() => setShowModal(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}><X size={24} /></button>
+                <motion.button 
+                  whileHover={{ rotate: 90, scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)' }} 
+                  onClick={() => setShowModal(false)} 
+                  style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', cursor: 'pointer', padding: '12px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <X size={24} />
+                </motion.button>
               </div>
 
-              {/* Saved Toast Inside Modal */}
-              <AnimatePresence>
-                {showSavedToast && (
-                  <motion.div 
-                    initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }}
-                    style={{ position: 'absolute', top: '1rem', left: '50%', translateX: '-50%', background: 'var(--accent-primary)', color: 'black', padding: '0.5rem 1.5rem', borderRadius: '50px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 10px 20px rgba(0,0,0,0.3)', zIndex: 10001 }}
-                  >
-                    <CheckCircle size={16} /> Saved Successfully!
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {(userEvents[selectedDate!] || []).map((ev, i) => (
-                    <div key={i} style={{ padding: '0.8rem', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.9rem' }}>{ev}</span>
-                      <button onClick={() => deleteEvent(selectedDate!, i)} style={{ background: 'transparent', border: 'none', color: '#ff4b4b', cursor: 'pointer' }}><Trash2 size={16} /></button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }} className="hide-scrollbar">
+                  {(userEvents[selectedDate!] || []).length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.3, border: '2px dashed rgba(255,255,255,0.08)', borderRadius: '32px', fontSize: '1.1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                      <Star size={32} opacity={0.5} />
+                      <span>No events for this day</span>
                     </div>
-                  ))}
+                  ) : (
+                    (userEvents[selectedDate!] || []).map((ev, i) => (
+                      <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} style={{ padding: '1.2rem 1.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                          <span style={{ fontSize: '1.3rem', color: 'var(--accent-primary)', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{ev.time}</span>
+                          <span style={{ fontSize: '1.2rem', fontWeight: 500, opacity: 0.9 }}>{ev.text}</span>
+                        </div>
+                        <motion.button whileHover={{ scale: 1.1, color: '#ff4d4d', backgroundColor: 'rgba(255,77,77,0.1)' }} onClick={() => deleteEvent(selectedDate!, i)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,75,75,0.3)', cursor: 'pointer', padding: '8px', borderRadius: '12px' }}><Trash2 size={20} /></motion.button>
+                      </motion.div>
+                    ))
+                  )}
                 </div>
                 
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                  <input 
-                    autoFocus type="text" value={eventInput} placeholder="What's happening?"
-                    onChange={(e) => setEventInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addEvent()}
-                    style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0.8rem 1rem', color: 'white' }}
-                  />
-                  <button onClick={addEvent} style={{ padding: '0 1.5rem', background: 'var(--accent-primary)', color: 'black', border: 'none', borderRadius: '12px', fontWeight: 600 }}>Save</button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'stretch' }}>
+                    <div className="glass-panel" style={{ 
+                      display: 'flex', alignItems: 'center', padding: '0 1rem', borderRadius: '32px', 
+                      background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
+                      height: '240px', overflow: 'hidden'
+                    }}>
+                      <ScrollWheel 
+                        options={Array.from({ length: 12 }, (_, i) => (i + 1).toString())}
+                        value={pickerH} isInfinite={true}
+                        onChange={(val) => updateFromPicker(val, pickerM, pickerP)}
+                        width="70px"
+                      />
+                      <span style={{ color: 'var(--accent-primary)', fontWeight: 900, fontSize: '2rem', opacity: 0.2 }}>:</span>
+                      <ScrollWheel 
+                        options={Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'))}
+                        value={pickerM} isInfinite={true}
+                        onChange={(val) => updateFromPicker(pickerH, val, pickerP)}
+                        width="70px"
+                      />
+                      <ScrollWheel 
+                        options={['AM', 'PM']}
+                        value={pickerP}
+                        onChange={(val) => updateFromPicker(pickerH, pickerM, val)}
+                        width="80px"
+                      />
+                    </div>
+
+                    <textarea 
+                      autoFocus value={eventInput} placeholder="Add a note or reminder..."
+                      onChange={(e) => setEventInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), addEvent())}
+                      style={{ 
+                        flex: 1, 
+                        background: 'rgba(255,255,255,0.03)', 
+                        border: '1px solid rgba(255,255,255,0.08)', 
+                        borderRadius: '32px', 
+                        padding: '1.8rem', 
+                        color: 'white', 
+                        resize: 'none', 
+                        height: '240px', 
+                        fontSize: '1.3rem', 
+                        outline: 'none', 
+                        fontWeight: 500,
+                        boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.2)'
+                      }}
+                    />
+                  </div>
+                  <motion.button 
+                    whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(0, 242, 255, 0.4)' }} 
+                    whileTap={{ scale: 0.98 }} 
+                    onClick={addEvent} 
+                    style={{ 
+                      width: '100%', 
+                      padding: '1.4rem', 
+                      background: 'linear-gradient(135deg, var(--accent-primary) 0%, #00d2ff 100%)', 
+                      color: 'black', 
+                      border: 'none', 
+                      borderRadius: '28px', 
+                      fontWeight: 800, 
+                      fontSize: '1.3rem', 
+                      cursor: 'pointer',
+                      boxShadow: '0 10px 25px rgba(0, 242, 255, 0.2)',
+                      letterSpacing: '0.02em'
+                    }}
+                  >
+                    Confirm Event
+                  </motion.button>
                 </div>
               </div>
             </motion.div>
@@ -290,4 +642,15 @@ export const CalendarApp = () => {
       </AnimatePresence>
     </div>
   );
+};
+
+
+const getDayTypeColor = (type?: string) => {
+  switch(type) {
+    case 'buddhist': return '#fcc419';
+    case 'christian': return '#ae3ec9';
+    case 'hindu': return '#fd7e14';
+    case 'muslim': return '#40c057';
+    default: return 'var(--accent-primary)';
+  }
 };

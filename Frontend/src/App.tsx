@@ -25,6 +25,7 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { CONFIG } from './config';
 import { GlobalPlayer } from './components/GlobalPlayer';
 import { MusicWidget } from './components/MusicWidget';
+import { ReminderWidget } from './components/ReminderWidget';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -147,8 +148,7 @@ function App() {
         <GlobalPlayer />
         <MusicWidget isIdle={!hasInteracted && !isAuthModalOpen && !showWelcome} />
         <div className="top-bar" style={{ justifyContent: 'flex-end' }}>
-        <div className="top-bar">
-          <div />
+          <ReminderWidget user={user} isActive={hasInteracted || isAuthModalOpen} />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
             <Clock />
             <Weather isActive={hasInteracted || isAuthModalOpen} />
