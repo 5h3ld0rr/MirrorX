@@ -5,7 +5,7 @@ import type { YouTubeVideo } from '../../services/youtube';
 import { youtubeService } from '../../services/youtube';
 import { useMusic } from '../../context/MusicContext';
 
-export const YoutubeApp = () => {
+export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: boolean) => void }) => {
   const { playVideo, currentTrack, activeType, stopAll, isPlaying, volume, togglePlay, setVolume } = useMusic();
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [relatedVideos, setRelatedVideos] = useState<YouTubeVideo[]>([]);
@@ -37,6 +37,17 @@ export const YoutubeApp = () => {
       }), '*');
     }
   }, [isPlaying, loaded, activeType]);
+  
+  // Sync Sleep Inhibition
+  useEffect(() => {
+    if (activeType === 'video' && isPlaying && onInhibitSleep) {
+      onInhibitSleep(true);
+    } else if (onInhibitSleep) {
+      onInhibitSleep(false);
+    }
+    
+    return () => onInhibitSleep?.(false);
+  }, [activeType, isPlaying, onInhibitSleep]);
 
   // Sync Volume
   useEffect(() => {

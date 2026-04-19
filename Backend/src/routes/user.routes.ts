@@ -11,12 +11,28 @@ router.get("/profile", verifyToken as any, async (req: Request, res: Response) =
   try {
     const uid = (req as any).user.uid;
     const userDoc = await db.collection("users").doc(uid).get();
-    
+
     if (!userDoc.exists) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.json({ uid, ...userDoc.data() });
+    const userData = userDoc.data() || {};
+    const preferences = userData.preferences || {};
+    const rgbController = preferences.rgbController || {};
+
+    // Combine for frontend compatibility
+    res.json({
+      uid,
+      ...userData,
+      // Flatten preferences into root for existing frontend components
+      accentColor: preferences.accentColor || userData.accentColor,
+      appBrightness: preferences.appBrightness !== undefined ? preferences.appBrightness : userData.appBrightness,
+      standByDelay: preferences.standByDelay !== undefined ? preferences.standByDelay : (userData.standByDelay !== undefined ? userData.standByDelay : userData.standbyDelay),
+      terminationDelay: preferences.terminationDelay !== undefined ? preferences.terminationDelay : (userData.terminationDelay !== undefined ? userData.terminationDelay : userData.logoutDelay),
+      // Flatten RGB
+      rgbColor: rgbController.r !== undefined ? { r: rgbController.r, g: rgbController.g, b: rgbController.b } : userData.rgbColor,
+      brightness: rgbController.brightness !== undefined ? rgbController.brightness : userData.brightness
+    });
   } catch (error: any) {
     console.error("❌ Error fetching profile:", error.message);
     res.status(500).json({ error: "Failed to fetch profile" });
@@ -42,30 +58,43 @@ router.get("/", verifyToken as any, async (req: Request, res: Response) => {
 router.patch("/profile", verifyToken as any, async (req: Request, res: Response) => {
   try {
     const uid = (req as any).user.uid;
-    const { name, bio, rgbColor, brightness, appBrightness, accentColor, alarms } = req.body;
 
+    // Traditional fields
     const updateData: any = {};
-    if (name) updateData.name = name;
-    if (bio !== undefined) updateData.bio = bio;
-    if (rgbColor !== undefined) updateData.rgbColor = rgbColor;
-    if (brightness !== undefined) updateData.brightness = brightness;
-    if (appBrightness !== undefined) updateData.appBrightness = appBrightness;
-    if (accentColor !== undefined) updateData.accentColor = accentColor;
-    if (alarms !== undefined) updateData.alarms = alarms;
+    if (req.body.name !== undefined) updateData.name = req.body.name;
+    if (req.body.bio !== undefined) updateData.bio = req.body.bio;
+    if (req.body.photoURL !== undefined) updateData.photoURL = req.body.photoURL;
+
+    // Preferences flattened -> Nested mapping
+    if (req.body.accentColor !== undefined) updateData['preferences.accentColor'] = req.body.accentColor;
+    if (req.body.appBrightness !== undefined) updateData['preferences.appBrightness'] = req.body.appBrightness;
+    if (req.body.standbyDelay !== undefined) updateData['preferences.standByDelay'] = req.body.standbyDelay;
+    if (req.body.logoutDelay !== undefined) updateData['preferences.terminationDelay'] = req.body.logoutDelay;
+
+    // RGB Controller mapping
+    if (req.body.rgbColor !== undefined) {
+      updateData['preferences.rgbController.r'] = req.body.rgbColor.r;
+      updateData['preferences.rgbController.g'] = req.body.rgbColor.g;
+      updateData['preferences.rgbController.b'] = req.body.rgbColor.b;
+    }
+    if (req.body.brightness !== undefined) {
+      updateData['preferences.rgbController.brightness'] = req.body.brightness;
+    }
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: "No fields to update" });
     }
 
-    await db.collection("users").doc(uid).set(updateData, { merge: true });
+    // Use update() to support dot-notation nested updates in Firestore
+    await db.collection("users").doc(uid).update(updateData);
 
-    if (name) {
+    if (req.body.name) {
       await admin.auth().updateUser(uid, {
-        displayName: name
+        displayName: req.body.name
       });
     }
 
-    res.json({ message: "Profile updated successfully", user: { uid, ...updateData } });
+    res.json({ message: "Profile updated successfully", updatedFields: Object.keys(updateData) });
   } catch (error: any) {
     console.error("❌ Error updating profile:", error.message);
     res.status(500).json({ error: "Failed to update profile" });

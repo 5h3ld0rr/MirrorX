@@ -1,7 +1,49 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Settings, User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap, Moon, Timer, MessageSquare, BookOpen, Cpu, FileText, ExternalLink, X, Send, Bot } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap, Moon, Timer, MessageSquare, Cpu, FileText, X, Send, Bot } from 'lucide-react';
 import { updateProfile, updateProfilePicture } from '../../lib/api';
 import { CONFIG } from '../../config';
+
+// Helper: RGB to Hue
+const rgbToHue = (r: number, g: number, b: number) => {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0;
+  if (max !== min) {
+    const d = max - min;
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return Math.round(h * 360);
+};
+
+// Helper: HSL to RGB
+const hslToRgb = (h: number, s: number, l: number) => {
+  h /= 360; s /= 100; l /= 100;
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    const hue2rgb = (t: number) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    r = hue2rgb(h + 1/3);
+    g = hue2rgb(h);
+    b = hue2rgb(h - 1/3);
+  }
+  return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+};
 
 export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleConnecting, bleDeviceName, bleCharacteristic, connectBLE, disconnectBLE }: { 
   user: any, 
@@ -14,6 +56,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
   connectBLE: () => Promise<void>,
   disconnectBLE: () => Promise<void>
 }) => {
+
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -46,8 +89,27 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
   const [ledPower, setLedPower] = useState(true);
   const [rgbHue, setRgbHue] = useState(0);
   const [rgbSat] = useState(100);
-  const [standbyDelay, setStandbyDelay] = useState(user.standbyDelay || CONFIG.STANDBY_DELAY);
-  const [logoutDelay, setLogoutDelay] = useState(user.logoutDelay || CONFIG.TERMINATION_DELAY);
+  const [standByDelay, setStandByDelay] = useState(user.standByDelay || CONFIG.STANDBY_DELAY);
+  const [terminationDelay, setTerminationDelay] = useState(user.terminationDelay || CONFIG.TERMINATION_DELAY);
+
+  // Sync state with user prop changes
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setBio(user.bio || "Passionate creator and early adopter of MirrorX tech.");
+      setPhotoURL(user.photoURL || '');
+      setAccentColor(user.accentColor || '#00f2ff');
+      setAppBrightness(user.appBrightness ?? 100);
+      setRgbColor(user.rgbColor || { r: 255, g: 0, b: 0 });
+      setBrightness(user.brightness ?? 100);
+      setStandByDelay(user.standByDelay || CONFIG.STANDBY_DELAY);
+      setTerminationDelay(user.terminationDelay || CONFIG.TERMINATION_DELAY);
+      
+      if (user.rgbColor) {
+        setRgbHue(rgbToHue(user.rgbColor.r, user.rgbColor.g, user.rgbColor.b));
+      }
+    }
+  }, [user]);
   const colorWheelRef = useRef<HTMLCanvasElement>(null);
   const saveTimerRef = useRef<any>(null);
 
@@ -100,7 +162,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
     saveTimerRef.current = setTimeout(async () => {
       try {
         await updateProfile({ standbyDelay: standby, logoutDelay: logout });
-        onUpdateUser({ standbyDelay: standby, logoutDelay: logout });
+        onUpdateUser({ standByDelay: standby, terminationDelay: logout });
       } catch (err) {
         console.error('Failed to save security settings:', err);
       }
@@ -113,32 +175,6 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, []);
 
-  // HSL to RGB conversion
-  const hslToRgb = useCallback((h: number, s: number, l: number) => {
-    s /= 100; l /= 100;
-    const a = s * Math.min(l, 1 - l);
-    const f = (n: number) => {
-      const k = (n + h / 30) % 12;
-      return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-    };
-    return { r: Math.round(f(0) * 255), g: Math.round(f(8) * 255), b: Math.round(f(4) * 255) };
-  }, []);
-  
-  const rgbToHue = useCallback((r: number, g: number, b: number) => {
-    r /= 255; g /= 255; b /= 255;
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h = 0;
-    if (max !== min) {
-      const d = max - min;
-      switch (max) {
-        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-        case g: h = (b - r) / d + 2; break;
-        case b: h = (r - g) / d + 4; break;
-      }
-      h /= 6;
-    }
-    return Math.round(h * 360);
-  }, []);
 
   // Send RGB command over BLE
   const sendRgbCommand = useCallback(async (r: number, g: number, b: number) => {
@@ -536,10 +572,12 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
           { label: '1 minute', value: 60000 },
           { label: '2 minutes', value: 120000 },
           { label: '5 minutes', value: 300000 },
+          { label: '10 minutes', value: 600000 },
           { label: 'Never', value: 2147483647 },
         ];
 
         const logoutOptions = [
+          { label: '30 seconds', value: 30000 },
           { label: '1 minute', value: 60000 },
           { label: '2 minutes', value: 120000 },
           { label: '5 minutes', value: 300000 },
@@ -617,11 +655,11 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
                   title="Turn my screen off after"
                   subtitle="Dims the display to save energy when no motion is detected"
                   icon={Moon}
-                  value={standbyDelay}
+                  value={standByDelay}
                   options={standbyOptions}
                   onChange={(val: number) => {
-                    setStandbyDelay(val);
-                    saveSecuritySettingsToCloud(val, logoutDelay);
+                    setStandByDelay(val);
+                    saveSecuritySettingsToCloud(val, terminationDelay);
                   }}
                 />
 
@@ -629,11 +667,11 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
                   title="Make my device log out after"
                   subtitle="Terminates your session automatically for security"
                   icon={Timer}
-                  value={logoutDelay}
+                  value={terminationDelay}
                   options={logoutOptions}
                   onChange={(val: number) => {
-                    setLogoutDelay(val);
-                    saveSecuritySettingsToCloud(standbyDelay, val);
+                    setTerminationDelay(val);
+                    saveSecuritySettingsToCloud(standByDelay, val);
                   }}
                 />
 
@@ -718,235 +756,294 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
             </div>
 
             {/* Color Wheel + Controls */}
-            <div style={{ opacity: bleConnected ? 1 : 0.35, pointerEvents: bleConnected ? 'auto' : 'none', transition: 'opacity 0.4s ease' }}>
-              {/* Power Toggle */}
-              <div className="glass-panel" style={{ padding: '1.5rem 2rem', borderRadius: '24px', marginBottom: '2rem' }}>
-                <div
-                  onClick={() => {
-                    const next = !ledPower;
-                    setLedPower(next);
-                    sendPowerCommand(next);
-                  }}
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <Power size={22} color={ledPower ? '#4ade80' : 'var(--text-muted)'} />
+            <div style={{ position: 'relative' }}>
+              {!bleConnected && (
+                <div style={{
+                  position: 'absolute',
+                  inset: -10,
+                  zIndex: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(0,0,0,0.15)',
+                  borderRadius: '32px',
+                  pointerEvents: 'none'
+                }}>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass-panel" 
+                    style={{ 
+                      padding: '1.2rem 2.5rem', 
+                      borderRadius: '20px', 
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'rgba(20,20,30,0.9)',
+                      backdropFilter: 'blur(20px)',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      boxShadow: '0 30px 60px rgba(0,0,0,0.6)',
+                    }}
+                  >
+                    <BluetoothOff size={22} color="var(--accent-primary)" />
                     <div>
-                      <h4 style={{ fontSize: '1.05rem' }}>LED Power</h4>
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{ledPower ? 'Lights are on' : 'Lights are off'}</p>
+                      <span style={{ fontWeight: 600, display: 'block', fontSize: '1.1rem' }}>Hardware Link Required</span>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Connect your ELK controller to unlock these tags</span>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+
+              <div style={{ 
+                opacity: bleConnected ? 1 : 0.2, 
+                pointerEvents: bleConnected ? 'auto' : 'none', 
+                transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                filter: bleConnected ? 'grayscale(0) blur(0px)' : 'grayscale(0.8) blur(3px)'
+              }}>
+                {/* Power Toggle */}
+                <div className="glass-panel" style={{ padding: '1.5rem 2rem', borderRadius: '24px', marginBottom: '2rem' }}>
+                  <div
+                    onClick={() => {
+                      if (!bleConnected) return;
+                      const next = !ledPower;
+                      setLedPower(next);
+                      sendPowerCommand(next);
+                    }}
+                    style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      cursor: bleConnected ? 'pointer' : 'not-allowed' 
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <Power size={22} color={bleConnected && ledPower ? '#4ade80' : 'var(--text-muted)'} />
+                      <div>
+                        <h4 style={{ fontSize: '1.05rem', color: bleConnected ? 'white' : 'var(--text-muted)' }}>LED Power</h4>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          {bleConnected ? (ledPower ? 'Lights are on' : 'Lights are off') : 'Bluetooth disconnected'}
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{
+                      width: '50px', height: '26px',
+                      background: bleConnected && ledPower ? '#4ade80' : 'rgba(255,255,255,0.1)',
+                      borderRadius: '20px', position: 'relative',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        left: bleConnected && ledPower ? '27px' : '3px', top: '3px',
+                        width: '20px', height: '20px',
+                        background: bleConnected && ledPower ? 'white' : 'rgba(255,255,255,0.7)',
+                        borderRadius: '50%',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }} />
                     </div>
                   </div>
-                  <div style={{
-                    width: '50px', height: '26px',
-                    background: ledPower ? '#4ade80' : 'rgba(255,255,255,0.1)',
-                    borderRadius: '20px', position: 'relative',
-                    transition: 'all 0.3s ease'
-                  }}>
-                    <div style={{
-                      position: 'absolute',
-                      left: ledPower ? '27px' : '3px', top: '3px',
-                      width: '20px', height: '20px',
-                      background: ledPower ? 'white' : 'rgba(255,255,255,0.7)',
-                      borderRadius: '50%',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }} />
-                  </div>
                 </div>
-              </div>
 
-              {/* Color Wheel */}
-              <div className="glass-panel" style={{ padding: '2.5rem', borderRadius: '24px', marginBottom: '2rem' }}>
-                <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'block', letterSpacing: '0.05em' }}>Color Wheel</label>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3rem', flexWrap: 'wrap' }}>
-                  <div style={{ position: 'relative' }}>
-                    <canvas
-                      ref={colorWheelRef}
-                      width={220}
-                      height={220}
-                      style={{ cursor: 'crosshair', borderRadius: '50%' }}
-                      onMouseDown={(e) => { setIsDraggingWheel(true); handleWheelInteraction(e); }}
-                      onMouseMove={(e) => { if (isDraggingWheel) handleWheelInteraction(e); }}
-                      onMouseUp={() => setIsDraggingWheel(false)}
-                      onMouseLeave={() => setIsDraggingWheel(false)}
-                      onTouchStart={(e) => { setIsDraggingWheel(true); handleWheelInteraction(e); }}
-                      onTouchMove={(e) => { if (isDraggingWheel) handleWheelInteraction(e); }}
-                      onTouchEnd={() => setIsDraggingWheel(false)}
-                    />
-                    {/* Center preview */}
-                    <div style={{
-                      position: 'absolute', top: '50%', left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      width: '80px', height: '80px', borderRadius: '50%',
-                      background: `rgb(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b})`,
-                      boxShadow: `0 0 30px rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.5), inset 0 0 15px rgba(255,255,255,0.1)`,
-                      border: '3px solid rgba(255,255,255,0.15)',
-                      transition: 'background 0.15s ease, box-shadow 0.15s ease'
-                    }} />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: '160px' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Manual Input</div>
-                    {/* R / G / B inputs */}
-                    <div style={{ display: 'flex', gap: '0.6rem' }}>
-                      {([
-                        { key: 'r' as const, label: 'R', color: '#ff6b6b' },
-                        { key: 'g' as const, label: 'G', color: '#51cf66' },
-                        { key: 'b' as const, label: 'B', color: '#339af0' },
-                      ]).map(ch => (
-                        <div key={ch.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
-                          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: ch.color }}>{ch.label}</label>
-                          <input
-                            type="number"
-                            min={0}
-                            max={255}
-                            value={rgbColor[ch.key]}
-                            onChange={(e) => {
-                              const val = Math.max(0, Math.min(255, parseInt(e.target.value) || 0));
-                              const newColor = { ...rgbColor, [ch.key]: val };
-                              setRgbColor(newColor);
-                              setRgbHue(rgbToHue(newColor.r, newColor.g, newColor.b));
-                            }}
-                            onBlur={() => {
-                              if (bleConnected && ledPower) sendRgbCommand(rgbColor.r, rgbColor.g, rgbColor.b);
-                              saveRgbToCloud(rgbColor, brightness);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
+                {/* Color Wheel */}
+                <div className="glass-panel" style={{ padding: '2.5rem', borderRadius: '24px', marginBottom: '2rem' }}>
+                  <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'block', letterSpacing: '0.05em' }}>Color Wheel</label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3rem', flexWrap: 'wrap' }}>
+                    <div style={{ position: 'relative' }}>
+                      <canvas
+                        ref={colorWheelRef}
+                        width={220}
+                        height={220}
+                        style={{ cursor: bleConnected ? 'crosshair' : 'not-allowed', borderRadius: '50%' }}
+                        onMouseDown={(e) => { if (!bleConnected) return; setIsDraggingWheel(true); handleWheelInteraction(e); }}
+                        onMouseMove={(e) => { if (isDraggingWheel && bleConnected) handleWheelInteraction(e); }}
+                        onMouseUp={() => setIsDraggingWheel(false)}
+                        onMouseLeave={() => setIsDraggingWheel(false)}
+                        onTouchStart={(e) => { if (!bleConnected) return; setIsDraggingWheel(true); handleWheelInteraction(e); }}
+                        onTouchMove={(e) => { if (isDraggingWheel && bleConnected) handleWheelInteraction(e); }}
+                        onTouchEnd={() => setIsDraggingWheel(false)}
+                      />
+                      {/* Center preview */}
+                      <div style={{
+                        position: 'absolute', top: '50%', left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '80px', height: '80px', borderRadius: '50%',
+                        background: `rgb(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b})`,
+                        boxShadow: `0 0 30px rgba(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}, 0.5), inset 0 0 15px rgba(255,255,255,0.1)`,
+                        border: '3px solid rgba(255,255,255,0.15)',
+                        transition: 'background 0.15s ease, box-shadow 0.15s ease'
+                      }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: '160px' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Manual Input</div>
+                      {/* R / G / B inputs */}
+                      <div style={{ display: 'flex', gap: '0.6rem' }}>
+                        {([
+                          { key: 'r' as const, label: 'R', color: '#ff6b6b' },
+                          { key: 'g' as const, label: 'G', color: '#51cf66' },
+                          { key: 'b' as const, label: 'B', color: '#339af0' },
+                        ]).map(ch => (
+                          <div key={ch.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
+                            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: ch.color }}>{ch.label}</label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={255}
+                              disabled={!bleConnected}
+                              value={rgbColor[ch.key]}
+                              onChange={(e) => {
+                                const val = Math.max(0, Math.min(255, parseInt(e.target.value) || 0));
+                                const newColor = { ...rgbColor, [ch.key]: val };
+                                setRgbColor(newColor);
+                                setRgbHue(rgbToHue(newColor.r, newColor.g, newColor.b));
+                              }}
+                              onBlur={() => {
                                 if (bleConnected && ledPower) sendRgbCommand(rgbColor.r, rgbColor.g, rgbColor.b);
                                 saveRgbToCloud(rgbColor, brightness);
-                              }
-                            }}
-                            style={{
-                              width: '76px', padding: '0.7rem 0.4rem', borderRadius: '12px',
-                              background: 'rgba(255,255,255,0.06)', border: `1px solid ${ch.color}33`,
-                              color: ch.color, fontFamily: 'monospace', fontSize: '1.5rem',
-                              fontWeight: 700, textAlign: 'center', outline: 'none',
-                              transition: 'border-color 0.2s ease',
-                            }}
-                            onFocus={(e) => e.currentTarget.style.borderColor = ch.color}
-                            onBlurCapture={(e) => e.currentTarget.style.borderColor = `${ch.color}33`}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    {/* Hex input */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '1.3rem', fontWeight: 600 }}>#</span>
-                      <input
-                        type="text"
-                        maxLength={6}
-                        value={`${rgbColor.r.toString(16).padStart(2, '0')}${rgbColor.g.toString(16).padStart(2, '0')}${rgbColor.b.toString(16).padStart(2, '0')}`}
-                        onChange={(e) => {
-                          const hex = e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
-                          if (hex.length === 6) {
-                            const r = parseInt(hex.substring(0, 2), 16);
-                            const g = parseInt(hex.substring(2, 4), 16);
-                            const b = parseInt(hex.substring(4, 6), 16);
-                            setRgbColor({ r, g, b });
-                            setRgbHue(rgbToHue(r, g, b));
-                          }
-                        }}
-                        onBlur={() => {
-                          if (bleConnected && ledPower) sendRgbCommand(rgbColor.r, rgbColor.g, rgbColor.b);
-                          saveRgbToCloud(rgbColor, brightness);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  if (bleConnected && ledPower) sendRgbCommand(rgbColor.r, rgbColor.g, rgbColor.b);
+                                  saveRgbToCloud(rgbColor, brightness);
+                                }
+                              }}
+                              style={{
+                                width: '76px', padding: '0.7rem 0.4rem', borderRadius: '12px',
+                                background: 'rgba(255,255,255,0.06)', border: `1px solid ${ch.color}33`,
+                                color: ch.color, fontFamily: 'monospace', fontSize: '1.5rem',
+                                fontWeight: 700, textAlign: 'center', outline: 'none',
+                                transition: 'border-color 0.2s ease',
+                                cursor: bleConnected ? 'text' : 'not-allowed'
+                              }}
+                              onFocus={(e) => e.currentTarget.style.borderColor = ch.color}
+                              onBlurCapture={(e) => e.currentTarget.style.borderColor = `${ch.color}33`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      {/* Hex input */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '1.3rem', fontWeight: 600 }}>#</span>
+                        <input
+                          type="text"
+                          maxLength={6}
+                          disabled={!bleConnected}
+                          value={`${rgbColor.r.toString(16).padStart(2, '0')}${rgbColor.g.toString(16).padStart(2, '0')}${rgbColor.b.toString(16).padStart(2, '0')}`}
+                          onChange={(e) => {
+                            const hex = e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
+                            if (hex.length === 6) {
+                              const r = parseInt(hex.substring(0, 2), 16);
+                              const g = parseInt(hex.substring(2, 4), 16);
+                              const b = parseInt(hex.substring(4, 6), 16);
+                              setRgbColor({ r, g, b });
+                              setRgbHue(rgbToHue(r, g, b));
+                            }
+                          }}
+                          onBlur={() => {
                             if (bleConnected && ledPower) sendRgbCommand(rgbColor.r, rgbColor.g, rgbColor.b);
                             saveRgbToCloud(rgbColor, brightness);
-                          }
-                        }}
-                        style={{
-                          flex: 1, padding: '0.7rem 0.8rem', borderRadius: '12px',
-                          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                          color: 'white', fontFamily: 'monospace', fontSize: '1.15rem',
-                          fontWeight: 600, textTransform: 'uppercase', outline: 'none',
-                          letterSpacing: '0.1em', transition: 'border-color 0.2s ease',
-                        }}
-                        onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-primary)'}
-                        onBlurCapture={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
-                      />
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              if (bleConnected && ledPower) sendRgbCommand(rgbColor.r, rgbColor.g, rgbColor.b);
+                              saveRgbToCloud(rgbColor, brightness);
+                            }
+                          }}
+                          style={{
+                            flex: 1, padding: '0.7rem 0.8rem', borderRadius: '12px',
+                            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                            color: 'white', fontFamily: 'monospace', fontSize: '1.15rem',
+                            fontWeight: 600, textTransform: 'uppercase', outline: 'none',
+                            letterSpacing: '0.1em', transition: 'border-color 0.2s ease',
+                            cursor: bleConnected ? 'text' : 'not-allowed'
+                          }}
+                          onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-primary)'}
+                          onBlurCapture={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Preset Colors */}
-              <div className="glass-panel" style={{ padding: '2rem', borderRadius: '24px', marginBottom: '2rem' }}>
-                <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'block', letterSpacing: '0.05em' }}>Quick Presets</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: '1rem' }}>
-                  {[
-                    { name: 'Red', r: 255, g: 0, b: 0 },
-                    { name: 'Orange', r: 255, g: 120, b: 0 },
-                    { name: 'Yellow', r: 255, g: 255, b: 0 },
-                    { name: 'Green', r: 0, g: 255, b: 0 },
-                    { name: 'Cyan', r: 0, g: 255, b: 255 },
-                    { name: 'Blue', r: 0, g: 0, b: 255 },
-                    { name: 'Pink', r: 255, g: 0, b: 128 },
-                    { name: 'White', r: 255, g: 255, b: 255 },
-                    { name: 'Warm', r: 255, g: 180, b: 100 },
-                  ].map(preset => (
-                    <button
-                      key={preset.name}
-                      onClick={() => {
-                        const c = { r: preset.r, g: preset.g, b: preset.b };
-                        setRgbColor(c);
-                        setRgbHue(rgbToHue(c.r, c.g, c.b));
-                        if (ledPower) sendRgbCommand(preset.r, preset.g, preset.b);
-                        saveRgbToCloud(c, brightness);
-                      }}
-                      title={preset.name}
-                      style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
-                        background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.5rem'
-                      }}
-                    >
-                      <div style={{
-                        width: '44px', height: '44px', borderRadius: '50%',
-                        background: `rgb(${preset.r}, ${preset.g}, ${preset.b})`,
-                        boxShadow: (rgbColor.r === preset.r && rgbColor.g === preset.g && rgbColor.b === preset.b)
-                          ? `0 0 16px rgba(${preset.r}, ${preset.g}, ${preset.b}, 0.6), 0 0 0 3px rgba(255,255,255,0.4)`
-                          : `0 4px 12px rgba(${preset.r}, ${preset.g}, ${preset.b}, 0.25)`,
-                        border: (rgbColor.r === preset.r && rgbColor.g === preset.g && rgbColor.b === preset.b)
-                          ? '2px solid white' : '2px solid transparent',
-                        transition: 'all 0.25s ease',
-                      }}
-                        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.15)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                      />
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{preset.name}</span>
-                    </button>
-                  ))}
+                {/* Preset Colors */}
+                <div className="glass-panel" style={{ padding: '2rem', borderRadius: '24px', marginBottom: '2rem' }}>
+                  <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'block', letterSpacing: '0.05em' }}>Quick Presets</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: '1rem' }}>
+                    {[
+                      { name: 'Red', r: 255, g: 0, b: 0 },
+                      { name: 'Orange', r: 255, g: 120, b: 0 },
+                      { name: 'Yellow', r: 255, g: 255, b: 0 },
+                      { name: 'Green', r: 0, g: 255, b: 0 },
+                      { name: 'Cyan', r: 0, g: 255, b: 255 },
+                      { name: 'Blue', r: 0, g: 0, b: 255 },
+                      { name: 'Pink', r: 255, g: 0, b: 128 },
+                      { name: 'White', r: 255, g: 255, b: 255 },
+                      { name: 'Warm', r: 255, g: 180, b: 100 },
+                    ].map(preset => (
+                      <button
+                        key={preset.name}
+                        disabled={!bleConnected}
+                        onClick={() => {
+                          const c = { r: preset.r, g: preset.g, b: preset.b };
+                          setRgbColor(c);
+                          setRgbHue(rgbToHue(c.r, c.g, c.b));
+                          if (ledPower) sendRgbCommand(preset.r, preset.g, preset.b);
+                          saveRgbToCloud(c, brightness);
+                        }}
+                        title={preset.name}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
+                          background: 'transparent', border: 'none', cursor: bleConnected ? 'pointer' : 'not-allowed', padding: '0.5rem'
+                        }}
+                      >
+                        <div style={{
+                          width: '44px', height: '44px', borderRadius: '50%',
+                          background: `rgb(${preset.r}, ${preset.g}, ${preset.b})`,
+                          boxShadow: (rgbColor.r === preset.r && rgbColor.g === preset.g && rgbColor.b === preset.b)
+                            ? `0 0 16px rgba(${preset.r}, ${preset.g}, ${preset.b}, 0.6), 0 0 0 3px rgba(255,255,255,0.4)`
+                            : `0 4px 12px rgba(${preset.r}, ${preset.g}, ${preset.b}, 0.25)`,
+                          border: (rgbColor.r === preset.r && rgbColor.g === preset.g && rgbColor.b === preset.b)
+                            ? '2px solid white' : '2px solid transparent',
+                          transition: 'all 0.25s ease',
+                        }}
+                          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.15)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                        />
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{preset.name}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Brightness Slider */}
-              <div className="glass-panel" style={{ padding: '2rem', borderRadius: '24px' }}>
-                <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', letterSpacing: '0.05em' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Zap size={14} /> Brightness</span>
-                  <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: 'white', fontWeight: 600 }}>{brightness}%</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={brightness}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    setBrightness(val);
-                    if (ledPower) {
-                      sendRgbCommand(rgbColor.r, rgbColor.g, rgbColor.b);
-                    }
-                    saveRgbToCloud(rgbColor, val);
-                  }}
-                  style={{
-                    width: '100%', height: '8px', borderRadius: '4px',
-                    appearance: 'none', outline: 'none', cursor: 'pointer',
-                    background: `linear-gradient(to right, rgba(255,255,255,0.05) 0%, rgb(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}) ${brightness}%, rgba(255,255,255,0.08) ${brightness}%)`,
-                  }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  <span>Off</span><span>Max</span>
+                {/* Brightness Slider */}
+                <div className="glass-panel" style={{ padding: '2rem', borderRadius: '24px' }}>
+                  <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', letterSpacing: '0.05em' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Zap size={14} /> Brightness</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: 'white', fontWeight: 600 }}>{brightness}%</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    disabled={!bleConnected}
+                    value={brightness}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setBrightness(val);
+                      if (ledPower) {
+                        sendRgbCommand(rgbColor.r, rgbColor.g, rgbColor.b);
+                      }
+                      saveRgbToCloud(rgbColor, val);
+                    }}
+                    style={{
+                      width: '100%', height: '8px', borderRadius: '4px',
+                      appearance: 'none', outline: 'none', cursor: bleConnected ? 'pointer' : 'not-allowed',
+                      background: `linear-gradient(to right, rgba(255,255,255,0.05) 0%, rgb(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b}) ${brightness}%, rgba(255,255,255,0.08) ${brightness}%)`,
+                    }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    <span>Off</span><span>Max</span>
+                  </div>
                 </div>
               </div>
             </div>

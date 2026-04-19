@@ -11,10 +11,11 @@ import {
   Pause, 
   RotateCcw,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getUserProfile, updateProfile } from '../../lib/api';
+import { getAlarms, createAlarm, updateAlarm, deleteAlarm as apiDeleteAlarm } from '../../lib/api';
 
 interface WorldClock {
   id: string;
@@ -34,6 +35,7 @@ interface Alarm {
 export const ClockApp = () => {
   const [time, setTime] = useState(new Date());
   const [activeTab, setActiveTab] = useState<'clock' | 'world' | 'alarm' | 'timer'>('clock');
+  const [isLoadingAlarms, setIsLoadingAlarms] = useState(false);
   
   // World Clock State
   const [worldClocks, setWorldClocks] = useState<WorldClock[]>([
@@ -46,10 +48,7 @@ export const ClockApp = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Alarm State
-  const [alarms, setAlarms] = useState<Alarm[]>([
-    { id: '1', time: '07:00 AM', label: 'Morning', active: true, days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] },
-    { id: '2', time: '09:30 AM', label: 'Meeting', active: false, days: ['Mon', 'Wed', 'Fri'] },
-  ]);
+  const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [isAddAlarmOpen, setIsAddAlarmOpen] = useState(false);
   const [editingAlarm, setEditingAlarm] = useState<Alarm | null>(null);
   const [newAlarmTime, setNewAlarmTime] = useState('07:00');
@@ -64,22 +63,21 @@ export const ClockApp = () => {
   const [totalTimerTime, setTotalTimerTime] = useState(600);
   const timerIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const fetchAlarms = async () => {
+    try {
+      setIsLoadingAlarms(true);
+      const data = await getAlarms();
+      setAlarms(data);
+    } catch (err) {
+      console.error("Failed to load alarms:", err);
+    } finally {
+      setIsLoadingAlarms(false);
+    }
+  };
+
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
-    
-    // Load alarms from Firestore
-    const loadAlarms = async () => {
-      try {
-        const profile = await getUserProfile();
-        if (profile.alarms && profile.alarms.length > 0) {
-          setAlarms(profile.alarms);
-        }
-      } catch (err) {
-        console.error("Failed to load alarms:", err);
-      }
-    };
-    loadAlarms();
-
+    fetchAlarms();
     return () => clearInterval(timer);
   }, []);
 
@@ -92,14 +90,13 @@ export const ClockApp = () => {
     }
   };
 
-  // Timer Logic
   useEffect(() => {
     if (isTimerRunning && timerRemaining > 0) {
       timerIntervalRef.current = setInterval(() => {
         setTimerRemaining(prev => prev - 1);
       }, 1000);
-    } else {
-      if (timerRemaining === 0) setIsTimerRunning(false);
+    } else if (timerRemaining === 0) {
+      setIsTimerRunning(false);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
     return () => {
@@ -143,10 +140,14 @@ export const ClockApp = () => {
     city.country.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const addCity = (city: typeof cityOptions[0]) => {
-    if (!worldClocks.find(c => c.city === city.city)) {
-      setWorldClocks([...worldClocks, { ...city, id: Date.now().toString() }]);
-    }
+  const addCity = (city: any) => {
+    const newCity: WorldClock = {
+      id: Date.now().toString(),
+      city: city.city,
+      country: city.country,
+      timezone: city.timezone
+    };
+    setWorldClocks([...worldClocks, newCity]);
     setIsAddCityOpen(false);
     setSearchQuery('');
   };
@@ -178,47 +179,56 @@ export const ClockApp = () => {
     setIsAddAlarmOpen(true);
   };
 
-  const saveAlarm = () => {
+  const saveAlarm = async () => {
     const [h, m] = newAlarmTime.split(':');
     const hour = parseInt(h);
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour % 12 || 12;
     const timeStr = `${displayHour.toString().padStart(2, '0')}:${m} ${ampm}`;
 
-    let updatedAlarms: Alarm[];
-    if (editingAlarm) {
-      updatedAlarms = alarms.map(a => a.id === editingAlarm.id ? { 
-        ...a, 
-        time: timeStr, 
-        label: newAlarmLabel || 'Alarm', 
-        days: selectedDays 
-      } : a);
-    } else {
-      updatedAlarms = [...alarms, {
-        id: Date.now().toString(),
-        time: timeStr,
-        label: newAlarmLabel || 'Alarm',
-        active: true,
-        days: selectedDays
-      }];
+    try {
+      if (editingAlarm) {
+        await updateAlarm(editingAlarm.id, { 
+          time: timeStr, 
+          label: newAlarmLabel || 'Alarm', 
+          days: selectedDays 
+        });
+      } else {
+        await createAlarm({
+          time: timeStr,
+          label: newAlarmLabel || 'Alarm',
+          active: true,
+          days: selectedDays
+        });
+      }
+      fetchAlarms();
+      closeAlarmModal();
+    } catch (err) {
+      console.error('Failed to save alarm:', err);
     }
-    setAlarms(updatedAlarms);
-    updateProfile({ alarms: updatedAlarms }).catch(console.error);
-    closeAlarmModal();
   };
 
-  const deleteAlarm = (id: string, e: React.MouseEvent) => {
+  const deleteAlarm = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const updatedAlarms = alarms.filter(a => a.id !== id);
-    setAlarms(updatedAlarms);
-    updateProfile({ alarms: updatedAlarms }).catch(console.error);
+    try {
+      await apiDeleteAlarm(id);
+      setAlarms(alarms.filter(a => a.id !== id));
+    } catch (err) {
+      console.error('Failed to delete alarm:', err);
+    }
   };
 
-  const toggleAlarm = (id: string, e: React.MouseEvent) => {
+  const toggleAlarm = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const updatedAlarms = alarms.map(a => a.id === id ? { ...a, active: !a.active } : a);
-    setAlarms(updatedAlarms);
-    updateProfile({ alarms: updatedAlarms }).catch(console.error);
+    const alarm = alarms.find(a => a.id === id);
+    if (!alarm) return;
+    
+    try {
+      await updateAlarm(id, { active: !alarm.active });
+      setAlarms(alarms.map(a => a.id === id ? { ...a, active: !a.active } : a));
+    } catch (err) {
+      console.error('Failed to toggle alarm:', err);
+    }
   };
 
   const toggleDay = (day: string) => {
@@ -396,7 +406,7 @@ export const ClockApp = () => {
               exit={{ opacity: 0, x: 20 }}
               style={{ padding: '0 2rem' }}
             >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h2 style={{ fontSize: '2rem', fontWeight: 300 }}>Alarms</h2>
                 <button 
                   className="glass-panel" 
@@ -406,30 +416,39 @@ export const ClockApp = () => {
                   <Plus size={18} /> New Alarm
                 </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-                {alarms.map(alarm => (
-                  <div 
-                    key={alarm.id} 
-                    className="glass-panel" 
-                    onClick={() => openEditAlarm(alarm)}
-                    style={{ 
-                      padding: '2rem', 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      opacity: alarm.active ? 1 : 0.6, 
-                      transition: 'all 0.3s',
-                      cursor: 'pointer',
-                      position: 'relative'
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: '3rem', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>{alarm.time}</div>
-                      <div style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>{alarm.label} • {alarm.days.join(', ')}</div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                      <button 
-                        onClick={(e) => deleteAlarm(alarm.id, e)}
+
+              {isLoadingAlarms ? (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                    <Loader2 size={32} color="var(--accent-primary)" />
+                  </motion.div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                  {alarms.map(alarm => (
+                    <motion.div 
+                      key={alarm.id} 
+                      className="glass-panel" 
+                      onClick={() => openEditAlarm(alarm)}
+                      style={{ 
+                        padding: '2rem', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        opacity: alarm.active ? 1 : 0.6, 
+                        transition: 'all 0.3s',
+                        cursor: 'pointer',
+                        position: 'relative'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '3rem', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>{alarm.time}</div>
+                        <div style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>{alarm.label} • {alarm.days.join(', ')}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                        <button 
+                          onClick={(e) => deleteAlarm(alarm.id, e)}
+
                         style={{ background: 'transparent', border: 'none', color: 'rgba(255, 61, 61, 0.6)', cursor: 'pointer', padding: '0.5rem' }}
                       >
                         <Trash2 size={20} />
@@ -453,11 +472,12 @@ export const ClockApp = () => {
                         />
                       </button>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
-            </motion.div>
-          )}
+            )}
+          </motion.div>
+        )}
 
           {activeTab === 'timer' && (
             <motion.div

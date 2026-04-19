@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from '
 import { ChevronLeft, ChevronRight, Star, X, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { db } from '../../lib/firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, addDoc, deleteDoc } from 'firebase/firestore';
 
 const GOOGLE_CAL_ID = 'en.lk#holiday@group.v.calendar.google.com';
 const GOOGLE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY;
@@ -126,7 +126,7 @@ export const CalendarApp = ({ user }: { user: any }) => {
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [holidays, setHolidays] = useState<Record<string, { name: string, type: 'buddhist'|'christian'|'hindu'|'muslim'|'national' }>>({});
-  const [userEvents, setUserEvents] = useState<Record<string, { text: string, time: string }[]>>({});
+  const [userEvents, setUserEvents] = useState<Record<string, { text: string, time: string, id: string }[]>>({});
   const [showModal, setShowModal] = useState(false);
   const [eventInput, setEventInput] = useState('');
   const [timeInput, setTimeInput] = useState('12:00');
@@ -174,14 +174,20 @@ export const CalendarApp = ({ user }: { user: any }) => {
   useEffect(() => {
     if (!user?.uid) return;
 
-    const userDocRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setUserEvents(data.calendarEvents || {});
-      } else {
-        setUserEvents({});
-      }
+    const eventsRef = collection(db, 'users', user.uid, 'events');
+    const unsubscribe = onSnapshot(eventsRef, (snapshot) => {
+      const mapped: Record<string, { text: string, time: string, id: string }[]> = {};
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const date = data.date;
+        if (!mapped[date]) mapped[date] = [];
+        mapped[date].push({ 
+          text: data.text, 
+          time: data.time, 
+          id: doc.id 
+        });
+      });
+      setUserEvents(mapped);
     }, (err) => {
       console.error("Calendar Firestore Error:", err);
     });
@@ -223,34 +229,26 @@ export const CalendarApp = ({ user }: { user: any }) => {
   const addEvent = async () => {
     if (!eventInput.trim() || !selectedDate || !user?.uid) return;
     
-    const newEvents = {
-      ...userEvents,
-      [selectedDate]: [...(userEvents[selectedDate] || []), { text: eventInput.trim(), time: timeInput }]
-    };
-
     try {
-      await setDoc(doc(db, 'users', user.uid), { calendarEvents: newEvents }, { merge: true });
+      const eventsRef = collection(db, 'users', user.uid, 'events');
+      await addDoc(eventsRef, {
+        date: selectedDate,
+        text: eventInput.trim(),
+        time: timeInput,
+        createdAt: new Date().toISOString()
+      });
       setEventInput('');
     } catch (error) {
       console.error("Firestore Save Error:", error);
     }
   };
 
-  const deleteEvent = async (dateStr: string, index: number) => {
-    if (!user?.uid) return;
+  const deleteEvent = async (eventId: string) => {
+    if (!user?.uid || !eventId) return;
     
-    const updated = [...(userEvents[dateStr] || [])];
-    updated.splice(index, 1);
-    
-    const newEvents = { ...userEvents };
-    if (updated.length === 0) {
-      delete newEvents[dateStr];
-    } else {
-      newEvents[dateStr] = updated;
-    }
-
     try {
-      await setDoc(doc(db, 'users', user.uid), { calendarEvents: newEvents }, { merge: true });
+      const eventDocRef = doc(db, 'users', user.uid, 'events', eventId);
+      await deleteDoc(eventDocRef);
     } catch (error) {
       console.error("Firestore Delete Error:", error);
     }
@@ -581,7 +579,7 @@ export const CalendarApp = ({ user }: { user: any }) => {
                           <span style={{ fontSize: '1.3rem', color: 'var(--accent-primary)', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{ev.time}</span>
                           <span style={{ fontSize: '1.2rem', fontWeight: 500, opacity: 0.9 }}>{ev.text}</span>
                         </div>
-                        <motion.button whileHover={{ scale: 1.1, color: '#ff4d4d', backgroundColor: 'rgba(255,77,77,0.1)' }} onClick={() => deleteEvent(selectedDate!, i)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,75,75,0.3)', cursor: 'pointer', padding: '8px', borderRadius: '12px' }}><Trash2 size={20} /></motion.button>
+                        <motion.button whileHover={{ scale: 1.1, color: '#ff4d4d', backgroundColor: 'rgba(255,77,77,0.1)' }} onClick={() => deleteEvent(ev.id)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,75,75,0.3)', cursor: 'pointer', padding: '8px', borderRadius: '12px' }}><Trash2 size={20} /></motion.button>
                       </motion.div>
                     ))
                   )}

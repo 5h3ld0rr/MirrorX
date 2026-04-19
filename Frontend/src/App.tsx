@@ -43,6 +43,7 @@ function App() {
   const [bleConnected, setBleConnected] = useState(false);
   const [bleConnecting, setBleConnecting] = useState(false);
   const [bleDeviceName, setBleDeviceName] = useState('');
+  const [isInhibitingSleep, setIsInhibitingSleep] = useState(false);
 
   // Auto-connect BLE and apply saved RGB color
   const autoConnectBLE = async (profile: any) => {
@@ -174,6 +175,7 @@ function App() {
 
   const handleAuth = (userData: any, isNewLogin: boolean = false) => {
     setUser(userData);
+    setHasInteracted(true);
     if (isNewLogin) {
       setShowWelcome(true);
       autoConnectBLE(userData);
@@ -246,21 +248,21 @@ function App() {
       if (sleepTimeout) clearTimeout(sleepTimeout);
       if (terminationTimeout) clearTimeout(terminationTimeout);
 
-      if (isAuthModalOpen || showWelcome) return;
+      if (isAuthModalOpen || showWelcome || isInhibitingSleep) return;
 
-      const standbyVal = user?.standbyDelay || CONFIG.STANDBY_DELAY;
-      const logoutVal = user?.logoutDelay || CONFIG.TERMINATION_DELAY;
+      const standbyVal = user?.standByDelay || CONFIG.STANDBY_DELAY;
+      const logoutVal = user?.terminationDelay || CONFIG.TERMINATION_DELAY;
 
       if (hasInteracted) {
         sleepTimeout = setTimeout(() => {
           setHasInteracted(false);
+          setActiveApp(null);
         }, standbyVal);
       }
 
-      const finalLogoutDelay = hasInteracted ? standbyVal + logoutVal : logoutVal;
       terminationTimeout = setTimeout(() => {
         if (user) handleLogout();
-      }, finalLogoutDelay);
+      }, logoutVal);
 
     };
 
@@ -422,6 +424,7 @@ function App() {
           user={user}
           onLogout={handleLogout}
           onUpdateUser={(updatedData) => handleAuth({ ...user, ...updatedData })}
+          onInhibitSleep={setIsInhibitingSleep}
           bleProps={{
             bleConnected,
             bleConnecting,
@@ -436,17 +439,15 @@ function App() {
         <GlobalPlayer />
         {user && <MusicWidget isIdle={!activeApp} />}
       </motion.div>
-      {user && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'black',
-          opacity: 1 - (user.appBrightness ?? 100) / 100,
-          pointerEvents: 'none',
-          zIndex: 10000,
-          transition: 'opacity 0.3s ease'
-        }} />
-      )}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'black',
+        opacity: 1 - (user?.appBrightness ?? CONFIG.DEFAULT_APP_BRIGHTNESS) / 100,
+        pointerEvents: 'none',
+        zIndex: 10000,
+        transition: 'opacity 0.3s ease'
+      }} />
     </>
   );
 }

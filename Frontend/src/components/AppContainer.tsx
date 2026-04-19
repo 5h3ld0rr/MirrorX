@@ -29,6 +29,7 @@ interface AppContainerProps {
   user: any;
   onLogout: () => void;
   onUpdateUser: (data: any) => void;
+  onInhibitSleep: (inhibit: boolean) => void;
   bleProps: {
     bleConnected: boolean;
     bleConnecting: boolean;
@@ -39,7 +40,7 @@ interface AppContainerProps {
   };
 }
 
-export const AppContainer = ({ activeApp, onClose, user, onLogout, onUpdateUser, bleProps }: AppContainerProps) => {
+export const AppContainer = ({ activeApp, onClose, user, onLogout, onUpdateUser, onInhibitSleep, bleProps }: AppContainerProps) => {
   const renderApp = () => {
     switch (activeApp) {
       case 'Calendar': return <CalendarApp user={user} />;
@@ -54,7 +55,7 @@ export const AppContainer = ({ activeApp, onClose, user, onLogout, onUpdateUser,
         {...bleProps}
       />;
       case 'News': return <NewsApp />;
-      case 'UTube': return <YoutubeApp />;
+      case 'UTube': return <YoutubeApp onInhibitSleep={onInhibitSleep} />;
       case 'Fashion': return <FashionApp />;
       default: return null;
     }

@@ -26,7 +26,11 @@ export const updateProfile = async (data: {
   brightness?: number, 
   appBrightness?: number, 
   accentColor?: string,
-  alarms?: any[]
+  alarms?: any[],
+  standbyDelay?: number, // Legacy field for mapping support
+  logoutDelay?: number,  // Legacy field for mapping support
+  standByDelay?: number,
+  terminationDelay?: number
 }) => {
   const token = await auth.currentUser?.getIdToken();
   if (!token) throw new Error("No authenticated user");
@@ -65,5 +69,111 @@ export const updateProfilePicture = async (formData: FormData) => {
     throw new Error(error.error || 'Failed to update profile picture');
   }
 
+  return await response.json();
+};
+
+// Alarms API
+export const getAlarms = async () => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/alarms`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!response.ok) throw new Error('Failed to fetch alarms');
+  return await response.json();
+};
+
+export const createAlarm = async (data: any) => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/alarms`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return await response.json();
+};
+
+export const updateAlarm = async (id: string, data: any) => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/alarms/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return await response.json();
+};
+
+export const deleteAlarm = async (id: string) => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/alarms/${id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  return await response.json();
+};
+
+// Notes API
+export const getNotes = async () => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/notes`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!response.ok) throw new Error('Failed to fetch notes');
+  return await response.json();
+};
+
+export const createNote = async (data: any) => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/notes`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return await response.json();
+};
+
+export const updateNote = async (id: string, data: any) => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return await response.json();
+};
+
+export const deleteNote = async (id: string) => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
   return await response.json();
 };

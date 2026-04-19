@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Newspaper, ArrowRight, Share2, Bookmark } from 'lucide-react';
+import { ArrowRight, Share2, Bookmark } from 'lucide-react';
 
 export const NewsApp = () => {
   const newsItems = [
