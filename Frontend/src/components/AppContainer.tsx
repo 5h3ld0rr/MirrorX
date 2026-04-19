@@ -17,9 +17,10 @@ interface AppContainerProps {
   onClose: () => void;
   user: any;
   onLogout: () => void;
+  onUpdateUser: (data: any) => void;
 }
 
-export const AppContainer = ({ activeApp, onClose, user, onLogout }: AppContainerProps) => {
+export const AppContainer = ({ activeApp, onClose, user, onLogout, onUpdateUser }: AppContainerProps) => {
   const renderApp = () => {
     switch (activeApp) {
       case 'Calendar': return <CalendarApp user={user} />;
@@ -27,7 +28,7 @@ export const AppContainer = ({ activeApp, onClose, user, onLogout }: AppContaine
       case 'Notes': return <NotesApp />;
       case 'Music': return <YTMusicApp />;
       case 'Weather': return <WeatherApp />;
-      case 'Settings': return <SettingsApp user={user} onLogout={onLogout} />;
+      case 'Settings': return <SettingsApp user={user} onLogout={onLogout} onUpdateUser={onUpdateUser} />;
       case 'News': return <NewsApp />;
       case 'UTube': return <YoutubeApp />;
       case 'Fashion': return <FashionApp />;

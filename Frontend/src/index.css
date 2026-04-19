@@ -309,3 +309,16 @@ video {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+.avatar-container:hover .avatar-overlay {
+  opacity: 1 !important;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
