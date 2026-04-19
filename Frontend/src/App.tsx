@@ -7,7 +7,6 @@ import {
   ShieldCheck,
   ShieldAlert,
   Scan,
-  Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -315,8 +314,6 @@ function App() {
         transition={{ duration: 1.5, ease: "easeOut" }}
         className="mirror-container"
       >
-        <GlobalPlayer />
-        <MusicWidget isIdle={!hasInteracted && !isAuthModalOpen && !showWelcome} />
         <div className="top-bar" style={{ justifyContent: 'flex-end' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
             <ReminderWidget user={user} isActive={hasInteracted || isAuthModalOpen} />
@@ -430,6 +427,10 @@ function App() {
             disconnectBLE
           }}
         />
+
+        {/* Global Multimedia Layer */}
+        <GlobalPlayer />
+        {user && <MusicWidget isIdle={!activeApp} />}
       </motion.div>
       {user && (
         <div style={{

@@ -1,42 +1,57 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMusic } from '../context/MusicContext';
 
 export const GlobalPlayer = () => {
-  const { currentTrack, isPlaying, volume } = useMusic();
+  const { currentTrack, isPlaying, volume, activeType } = useMusic();
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [loaded, setLoaded] = useState(false);
 
+  // Send commands to YouTube iframe
   useEffect(() => {
-    if (!currentTrack || !iframeRef.current) return;
-
-    // We use the YouTube IFrame API via postMessage for basic controls
-    // For a more robust implementation, the YouTube IFrame API script should be loaded
     const iframe = iframeRef.current;
-    
-    if (isPlaying) {
-      iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'playVideo' }), '*');
-    } else {
-      iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo' }), '*');
+    if (iframe && loaded && activeType === 'music') {
+      const command = isPlaying ? 'playVideo' : 'pauseVideo';
+      iframe.contentWindow?.postMessage(JSON.stringify({ 
+        event: 'command', 
+        func: command, 
+        args: [] 
+      }), '*');
     }
-  }, [isPlaying, currentTrack]);
+  }, [isPlaying, loaded, activeType]);
 
+  // Handle volume changes
   useEffect(() => {
-    if (!iframeRef.current) return;
-    iframeRef.current.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'setVolume', args: [volume] }), '*');
-  }, [volume]);
+    const iframe = iframeRef.current;
+    if (iframe && loaded && activeType === 'music') {
+      iframe.contentWindow?.postMessage(JSON.stringify({ 
+        event: 'command', 
+        func: 'setVolume', 
+        args: [volume] 
+      }), '*');
+    }
+  }, [volume, loaded, activeType]);
 
-  if (!currentTrack) return null;
+  // Clean up and guards
+  if (!currentTrack || activeType !== 'music') {
+    return null;
+  }
+
+  const handleLoad = () => {
+    setLoaded(true);
+  };
+
+  const origin = window.location.origin;
 
   return (
-    <div style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', top: -100, left: -100, width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}>
       <iframe
+        key={currentTrack.id} // Force re-mount on track change
         ref={iframeRef}
         id="global-youtube-player"
-        width="1"
-        height="1"
-        src={`https://www.youtube.com/embed/${currentTrack.id}?enablejsapi=1&autoplay=1&controls=0`}
-        title="YouTube video player"
-        frameBorder="0"
+        onLoad={handleLoad}
+        src={`https://www.youtube-nocookie.com/embed/${currentTrack.id}?autoplay=1&playlist=${currentTrack.id}&loop=1&enablejsapi=1&origin=${origin}&widget_referrer=${origin}&rel=0&controls=0&modestbranding=1`}
         allow="autoplay; encrypted-media"
+        style={{ width: '100%', height: '100%', border: 'none' }}
       />
     </div>
   );

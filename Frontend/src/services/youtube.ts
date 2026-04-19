@@ -45,6 +45,32 @@ export const youtubeService = {
     }
   },
 
+  async getTrendingMusic(maxResults = 12): Promise<YouTubeVideo[]> {
+    try {
+      const response = await youtubeApi.get('/videos', {
+        params: {
+          chart: 'mostPopular',
+          part: 'snippet,statistics,contentDetails',
+          videoCategoryId: '10', // Music
+          maxResults,
+        },
+      });
+
+      return response.data.items.map((item: any) => ({
+        id: item.id,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url,
+        channelTitle: item.snippet.channelTitle,
+        publishedAt: item.snippet.publishedAt,
+        viewCount: item.statistics.viewCount,
+        duration: item.contentDetails.duration,
+      }));
+    } catch (error) {
+      console.error('Error fetching trending music:', error);
+      return [];
+    }
+  },
+
   async getTrendingVideos(maxResults = 12): Promise<YouTubeVideo[]> {
     try {
       const response = await youtubeApi.get('/videos', {

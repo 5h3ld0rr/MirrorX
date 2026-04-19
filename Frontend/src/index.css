@@ -24,6 +24,35 @@
   box-sizing: border-box;
 }
 
+/* Custom Scrollbar - High Fidelity */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-primary);
+  border-radius: 10px;
+  box-shadow: 0 0 10px var(--accent-glow);
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: white;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-primary) rgba(0, 0, 0, 0.1);
+}
+
 body {
   background-color: var(--bg-dark);
   color: var(--text-primary);
