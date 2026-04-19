@@ -66,7 +66,8 @@ export const AppContainer = ({ activeApp, onClose, user, onLogout, onUpdateUser,
             display: 'flex',
             flexDirection: 'column',
             color: 'white',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            pointerEvents: 'auto'
           }}
         >
           {/* Global Toolbar */}
