@@ -279,86 +279,93 @@ export const CalendarApp = ({ user }: { user: any }) => {
 
   return (
     <div className="app-content" style={{ padding: '2.5rem', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+      {/* Mesh Background for Depth */}
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 0% 0%, rgba(0, 242, 255, 0.03) 0%, transparent 50%), radial-gradient(circle at 100% 100%, rgba(128, 0, 255, 0.03) 0%, transparent 50%)', pointerEvents: 'none', zIndex: 0 }} />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3rem', position: 'relative', zIndex: 1 }}>
         <div>
-          <h2 style={{ 
-            fontSize: '3.5rem', 
-            fontWeight: 900, 
-            margin: 0, 
-            letterSpacing: '-0.04em',
-            background: 'linear-gradient(to bottom, #ffffff 0%, #a0a0a0 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            display: 'flex',
-            alignItems: 'baseline',
-            gap: '1rem'
-          }}>
-            {monthName} <span style={{ opacity: 0.3, fontWeight: 300, fontSize: '0.8em' }}>{year}</span>
-          </h2>
-          {isLoading && (
-            <div style={{ marginTop: '0.4rem' }}>
-              <motion.div 
-                animate={{ rotate: 360 }} 
-                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%' }}
-              />
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 style={{ 
+              fontSize: '4.5rem', 
+              fontWeight: 900, 
+              margin: 0, 
+              letterSpacing: '-0.05em',
+              lineHeight: 1,
+              background: 'linear-gradient(to bottom, #ffffff 30%, rgba(255,255,255,0.3) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 0 20px rgba(255,255,255,0.1))'
+            }}>
+              {monthName}
+            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+              <span style={{ fontSize: '1.2rem', fontWeight: 300, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.2em' }}>{year}</span>
+              {isLoading && (
+                <motion.div 
+                  animate={{ rotate: 360 }} 
+                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                  style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%' }}
+                />
+              )}
             </div>
-          )}
+          </motion.div>
         </div>
-        <div style={{ 
-          display: 'flex', 
-          gap: '0.4rem', 
-          alignItems: 'center', 
-          background: 'rgba(255, 255, 255, 0.05)', 
-          padding: '4px', 
-          borderRadius: '24px', 
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-        }}>
-          <motion.button 
-            whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--accent-primary)' }} 
-            whileTap={{ scale: 0.9 }} 
-            onClick={handlePrevMonth} 
-            style={{ 
-              width: '40px', 
-              height: '40px', 
-              borderRadius: '50%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              cursor: 'pointer', 
-              background: 'transparent', 
-              border: 'none', 
-              color: '#ffffff',
-              transition: 'all 0.2s ease'
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <motion.button
+            whileHover={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#ffffff' }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setViewDate(new Date())}
+            style={{
+              padding: '0.6rem 1.4rem',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '16px',
+              color: 'rgba(255,255,255,0.5)',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              backdropFilter: 'blur(10px)',
+              transition: 'all 0.3s ease'
             }}
           >
-            <ChevronLeft size={20} />
+            Today
           </motion.button>
           
-          <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.15)' }} />
-          
-          <motion.button 
-            whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--accent-primary)' }} 
-            whileTap={{ scale: 0.9 }} 
-            onClick={handleNextMonth} 
-            style={{ 
-              width: '40px', 
-              height: '40px', 
-              borderRadius: '50%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              cursor: 'pointer', 
-              background: 'transparent', 
-              border: 'none', 
-              color: '#ffffff',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <ChevronRight size={20} />
-          </motion.button>
+          <div style={{ 
+            display: 'flex', 
+            gap: '1px', 
+            alignItems: 'center', 
+            background: 'rgba(255, 255, 255, 0.05)', 
+            padding: '4px', 
+            borderRadius: '24px', 
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+          }}>
+            <motion.button 
+              whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--accent-primary)' }} 
+              whileTap={{ scale: 0.9 }} 
+              onClick={handlePrevMonth} 
+              style={{ width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'transparent', border: 'none', color: '#ffffff' }}
+            >
+              <ChevronLeft size={20} />
+            </motion.button>
+            <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
+            <motion.button 
+              whileHover={{ scale: 1.1, backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--accent-primary)' }} 
+              whileTap={{ scale: 0.9 }} 
+              onClick={handleNextMonth} 
+              style={{ width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'transparent', border: 'none', color: '#ffffff' }}
+            >
+              <ChevronRight size={20} />
+            </motion.button>
+          </div>
         </div>
       </div>
 
@@ -369,7 +376,8 @@ export const CalendarApp = ({ user }: { user: any }) => {
           gap: '1rem', 
           height: '100%', 
           gridTemplateRows: 'auto repeat(6, 1fr)',
-          perspective: '1000px'
+          perspective: '1000px',
+          padding: '2px'
         }}>
           {days.map(day => (
             <div key={day} style={{ 
@@ -400,33 +408,39 @@ export const CalendarApp = ({ user }: { user: any }) => {
             return (
               <motion.button
                 key={dayNum}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: (dayNum % 7) * 0.02 }}
                 whileHover={{ 
-                  y: -6, 
-                  scale: 1.02,
-                  background: isToday ? 'var(--accent-primary)' : 'rgba(255,255,255,0.08)',
-                  boxShadow: isToday ? '0 20px 40px rgba(0, 242, 255, 0.4)' : '0 20px 40px rgba(0,0,0,0.3)',
-                  zIndex: 10
+                  y: -8, 
+                  scale: 1.03,
+                  background: isToday ? 'linear-gradient(135deg, var(--accent-primary) 20%, #0088ff 100%)' : 'rgba(255,255,255,0.08)',
+                  boxShadow: isToday ? '0 30px 60px rgba(0, 242, 255, 0.3)' : '0 20px 40px rgba(0,0,0,0.5)',
+                  zIndex: 10,
+                  border: isToday ? '3px solid white' : '1px solid rgba(255,255,255,0.3)'
                 }}
                 onClick={() => { setSelectedDate(dStr); setShowModal(true); }}
                 style={{ 
                   textAlign: 'left', 
-                  padding: '1rem', 
+                  padding: '1.2rem', 
                   borderRadius: '24px', 
-                  border: isToday ? '2px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.06)',
+                  border: isToday ? '2px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.05)',
                   background: isToday 
                     ? 'linear-gradient(135deg, var(--accent-primary) 0%, #00d2ff 100%)' 
                     : holiday 
                       ? 'rgba(255, 255, 255, 0.04)' 
                       : 'rgba(255, 255, 255, 0.02)',
-                  boxShadow: isToday ? '0 0 30px rgba(0, 242, 255, 0.2)' : 'none',
-                  color: isToday ? 'black' : 'white', 
+                  backdropFilter: 'blur(8px)',
+                  boxShadow: isToday ? '0 0 40px rgba(0, 242, 255, 0.25)' : 'none',
+                  color: isToday ? '#ffffff' : 'rgba(255,255,255,0.9)', 
                   cursor: 'pointer', 
                   position: 'relative', 
                   display: 'flex', 
                   flexDirection: 'column', 
-                  gap: '6px',
-                  transition: 'border 0.2s ease, background 0.2s ease',
-                  minHeight: '120px'
+                  gap: '8px',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  minHeight: '130px',
+                  overflow: 'hidden'
                 }}
               >
                 {/* Background Glow for Today */}
@@ -443,27 +457,34 @@ export const CalendarApp = ({ user }: { user: any }) => {
                 )}
 
                 <div style={{ 
-                  fontSize: '1.8rem', 
+                  fontSize: '2.2rem', 
                   fontWeight: 900, 
-                  fontFamily: 'var(--font-mono)',
-                  letterSpacing: '-0.05em',
-                  opacity: isToday ? 1 : 0.9,
-                  lineHeight: 1
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  letterSpacing: '-0.06em',
+                  opacity: isToday ? 1 : 0.8,
+                  lineHeight: 0.9,
+                  textShadow: isToday ? '0 2px 10px rgba(0,0,0,0.2)' : 'none'
                 }}>
                   {dayNum}
                 </div>
 
                 {holiday && (
                   <div style={{ 
-                    fontSize: '0.7rem', 
-                    color: isToday ? 'rgba(0,0,0,0.8)' : getDayTypeColor(holiday.type), 
-                    fontWeight: 800, 
-                    lineHeight: 1.3,
-                    background: isToday ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.03)',
+                    fontSize: '0.65rem', 
+                    color: isToday ? '#ffffff' : getDayTypeColor(holiday.type), 
+                    fontWeight: 700, 
+                    lineHeight: 1.2,
+                    background: isToday ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.05)',
                     padding: '4px 8px',
-                    borderRadius: '8px',
-                    width: 'fit-content'
+                    borderRadius: '20px',
+                    width: 'fit-content',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }}>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isToday ? '#ffffff' : getDayTypeColor(holiday.type) }} />
                     {holiday.name}
                   </div>
                 )}
