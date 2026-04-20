@@ -4,7 +4,7 @@ import { Bell, Clock } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
-export const ReminderWidget = ({ user, isActive }: { user: any, isActive: boolean }) => {
+export const ReminderWidget = ({ user }: { user: any }) => {
   const [allEvents, setAllEvents] = useState<Record<string, { text: string, time: string }[]>>({});
   const [reminders, setReminders] = useState<{ text: string, time: string }[]>([]);
 
@@ -82,8 +82,8 @@ export const ReminderWidget = ({ user, isActive }: { user: any, isActive: boolea
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ 
-        opacity: isActive ? 1 : 0, 
-        x: isActive ? 0 : -20 
+        opacity: 1, 
+        x: 0 
       }}
       className="glass-panel"
       style={{

@@ -9,7 +9,7 @@ interface NewsSnippet {
   image: string;
 }
 
-export const NewsWidget = ({ isActive }: { isActive: boolean }) => {
+export const NewsWidget = () => {
   const [news, setNews] = useState<NewsSnippet[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -45,12 +45,10 @@ export const NewsWidget = ({ isActive }: { isActive: boolean }) => {
   };
 
   useEffect(() => {
-    if (isActive) {
       fetchLatest();
       const fetchInterval = setInterval(fetchLatest, 300000); // Refresh every 5 mins
       return () => clearInterval(fetchInterval);
-    }
-  }, [isActive]);
+  }, []);
 
   useEffect(() => {
     if (news.length > 0) {
@@ -61,7 +59,7 @@ export const NewsWidget = ({ isActive }: { isActive: boolean }) => {
     }
   }, [news]);
 
-  if (!isActive || loading || news.length === 0) return null;
+  if (loading || news.length === 0) return null;
 
   return (
     <motion.div 

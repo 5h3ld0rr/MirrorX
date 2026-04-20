@@ -335,12 +335,12 @@ function App() {
         className="mirror-container"
       >
         <div className="top-bar" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <NewsWidget isActive={hasInteracted || isAuthModalOpen} />
+          <NewsWidget />
           <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-            <ReminderWidget user={user} isActive={hasInteracted || isAuthModalOpen} />
+            <ReminderWidget user={user} />
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
               <Clock />
-              <Weather isActive={hasInteracted || isAuthModalOpen} />
+              <Weather />
             </div>
           </div>
         </div>
