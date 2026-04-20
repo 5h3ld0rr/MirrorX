@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Keyboard, Minimize2, Delete, CornerDownLeft, ArrowUp } from 'lucide-react';
+import { Delete, CornerDownLeft, ArrowUp, ZoomIn, ZoomOut, GripHorizontal, X } from 'lucide-react';
 
 export const VirtualKeyboard = () => {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isShift, setIsShift] = useState(false);
   const [activeInput, setActiveInput] = useState<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const [keyboardScale, setKeyboardScale] = useState(1);
+  const dragConstraintsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleFocus = (e: FocusEvent) => {
@@ -19,11 +20,9 @@ export const VirtualKeyboard = () => {
       const related = e.relatedTarget as HTMLElement;
       if (!related || (related.tagName !== 'INPUT' && related.tagName !== 'TEXTAREA')) {
         setActiveInput(null);
-        setIsExpanded(false);
       }
     };
     
-    // Use capture phase to ensure we always get focus events globally
     document.addEventListener('focus', handleFocus, true);
     document.addEventListener('blur', handleBlur, true);
     
@@ -52,7 +51,6 @@ export const VirtualKeyboard = () => {
     } else if (key === '{enter}') {
         activeInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
         if (activeInput.form) {
-            // Need to simulate a submit if it's within a form
             activeInput.form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
         }
     } else if (key === '{shift}') {
@@ -64,14 +62,13 @@ export const VirtualKeyboard = () => {
       const char = isShift ? key.toUpperCase() : key;
       newVal = val.slice(0, start) + char + val.slice(end);
       updateInput(newVal, start + 1);
-      if (isShift) setIsShift(false); // auto reset shift after one character
+      if (isShift) setIsShift(false);
     }
   };
 
   const updateInput = (newVal: string, newPos: number) => {
     if (!activeInput) return;
     
-    // Safely bypass React's synthetic value setter to guarantee onChange triggers properly
     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
       activeInput.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype,
       "value"
@@ -90,20 +87,25 @@ export const VirtualKeyboard = () => {
     ['@', '{space}', '{enter}']
   ];
 
-  if (!activeInput) return null;
-
   return (
-    <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 10000, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem', pointerEvents: 'none' }}>
-       
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10000, pointerEvents: 'none' }} ref={dragConstraintsRef}>
        <AnimatePresence>
-         {isExpanded && (
+         {activeInput && (
            <motion.div 
-             initial={{ opacity: 0, scale: 0.95, y: 20 }}
-             animate={{ opacity: 1, scale: 1, y: 0 }}
-             exit={{ opacity: 0, scale: 0.95, y: 20 }}
+             drag
+             dragConstraints={dragConstraintsRef}
+             dragElastic={0.1}
+             dragMomentum={false}
+             initial={{ opacity: 0, y: 50, scale: 0.9 }}
+             animate={{ opacity: 1, y: 0, scale: keyboardScale }}
+             exit={{ opacity: 0, y: 50, scale: 0.8 }}
+             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
              className="glass-panel"
              style={{ 
                pointerEvents: 'auto',
+               position: 'absolute',
+               bottom: '4rem',
+               right: '2rem',
                padding: '1.5rem', 
                borderRadius: '32px', 
                background: 'rgba(10, 10, 15, 0.85)', 
@@ -113,10 +115,54 @@ export const VirtualKeyboard = () => {
                flexDirection: 'column', 
                gap: '0.6rem', 
                width: '800px', 
-               boxShadow: '0 30px 60px rgba(0,0,0,0.6)' 
+               boxShadow: '0 30px 60px rgba(0,0,0,0.6)',
+               transformOrigin: 'bottom right'
              }}
-             onMouseDown={(e) => e.preventDefault()} // Prevent losing focus on input
+             onMouseDown={(e) => e.preventDefault()}
            >
+              {/* Draggable & Size Control Header */}
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  marginBottom: '0.5rem', 
+                  cursor: 'grab',
+                  paddingBottom: '0.5rem',
+                  borderBottom: '1px solid rgba(255,255,255,0.05)'
+                }} 
+              >
+                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <motion.button 
+                      whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                      style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: '0.2rem' }} 
+                      onClick={() => setKeyboardScale(Math.max(0.6, keyboardScale - 0.1))}
+                    >
+                      <ZoomOut size={18} />
+                    </motion.button>
+                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', fontWeight: 800 }}>{Math.round(keyboardScale * 100)}%</span>
+                    <motion.button 
+                      whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                      style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: '0.2rem' }} 
+                      onClick={() => setKeyboardScale(Math.min(1.5, keyboardScale + 0.1))}
+                    >
+                      <ZoomIn size={18} />
+                    </motion.button>
+                 </div>
+                 
+                 <div style={{ display: 'flex', alignItems: 'center', color: 'rgba(255,255,255,0.1)' }}>
+                    <GripHorizontal size={24} />
+                 </div>
+                 
+                 <motion.button 
+                   whileHover={{ scale: 1.1, color: 'white' }} whileTap={{ scale: 0.9 }}
+                   style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '0.2rem' }} 
+                   onClick={() => setActiveInput(null)}
+                 >
+                    <X size={20} />
+                 </motion.button>
+              </div>
+
               {rows.map((row, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
                    {row.map(key => {
@@ -179,30 +225,6 @@ export const VirtualKeyboard = () => {
            </motion.div>
          )}
        </AnimatePresence>
-
-       {/* Floating Toggle Button */}
-       <motion.button 
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setIsExpanded(!isExpanded)}
-          onMouseDown={(e) => e.preventDefault()}
-          className="glass-panel"
-          style={{ 
-            pointerEvents: 'auto',
-            width: '60px', 
-            height: '60px', 
-            borderRadius: '30px', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            padding: 0,
-            background: isExpanded ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(0, 242, 255, 0.2))',
-            border: '1px solid rgba(255,255,255,0.2)',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-          }}
-       >
-          {isExpanded ? <Minimize2 size={24} color="white" /> : <Keyboard size={24} color="#00f2ff" />}
-       </motion.button>
     </div>
   );
 }
