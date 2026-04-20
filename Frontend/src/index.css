@@ -376,3 +376,13 @@ div:hover > .hover-overlay button {
   filter: drop-shadow(0 0 10px #00f2ff);
   color: #00f2ff;
 }
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.search-input:focus {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 0, 255, 0.3) !important;
+  box-shadow: 0 0 20px rgba(255, 0, 255, 0.1);
+}

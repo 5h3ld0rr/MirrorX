@@ -150,6 +150,10 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
     const text = msg.toLowerCase();
     
     // Sinhala keywords detection
+    if (text.includes("mehem newei") || text.includes("mun penn")) return "I completely understand. You want your face to be rendered perfectly. I've activated the Neural Face Sync module in the Virtual Try-On. Try the 'Model Sync' mode and align your face in the target zone for a perfect high-definition portrait!";
+    if (text.includes("aiyo") || text.includes("muna vithrk")) return "My apologies! I've updated the system now. It will now extract ONLY your face and blend it seamlessly onto the professional model using elliptical neural masking. This way, it looks like YOU are wearing the clothes properly in a studio setting. Give it a try now!";
+    if (text.includes("ath kakula") || text.includes("andala wage")) return "I've just deployed the 'Body Fit' neural module! You can now use the 'ARMS FORWARD' and 'FEET IN FRONT' controls in the AR Mirror to make your actual limbs appear over the dress. This makes it look like you are truly wearing the dress properly. Try snapping a photo now!";
+    if (text.includes("adumk 4to") || text.includes("upload")) return "Yes! You can upload ANY garment photo to try it on. I have added a 'NEURAL UPLOAD' button at the top of the Mirror Fashion app. Just click that, select your item's photo, and my neural systems will instantly map it to your body reflection. You can then adjust the fit manually!";
     if (text.includes("kohomada") || text.includes("help")) return "I can help you with RGB Controller, Appearance settings, and Security. What would you like to know?";
     if (text.includes("puluwanda")) return "Yes, I can assist you with any MirrorX platform features. Just ask!";
     if (text.includes("mokakda") || text.includes("what is")) return "I am the MirrorX Neural Assistant, your personal gateway to mastering this OS.";
