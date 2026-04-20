@@ -80,7 +80,7 @@ export const VirtualKeyboard = () => {
   ];
 
   return (
-    <div style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 10000, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 10000, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem', pointerEvents: 'none' }}>
        
        <AnimatePresence>
          {isExpanded && (
