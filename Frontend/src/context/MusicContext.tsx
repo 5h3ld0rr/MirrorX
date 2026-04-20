@@ -8,6 +8,7 @@ interface MusicContextType {
   volume: number;
   progress: number;
   duration: number;
+  setDuration: (seconds: number) => void;
   // YouTube specific
   activeId: string | null;
   activeType: 'music' | 'video' | null;
@@ -34,18 +35,20 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [volume, setVolume] = useState(70);
   const [activeType, setActiveType] = useState<'music' | 'video' | null>(null);
   const [progress, setProgress] = useState(0);
-  const duration = 210; // Fixed duration for now or can be state if updated later
+  const [duration, setDuration] = useState(0);
 
   // Sync Timer
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (isPlaying && activeType === 'music') {
+    if (isPlaying) {
       interval = setInterval(() => {
-        setProgress(prev => (prev < duration ? prev + 1 : 0));
+        if (progress < duration && duration > 0) {
+          setProgress(prev => prev + 1);
+        }
       }, 1000);
     }
     return () => clearInterval(interval!);
-  }, [isPlaying, activeType, duration]);
+  }, [isPlaying, progress, duration]);
 
   const playTrack = useCallback((track: YouTubeVideo, newQueue?: YouTubeVideo[]) => {
     setActiveVideo(null);
@@ -103,6 +106,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       volume,
       progress,
       duration,
+      setDuration,
       activeId: activeType === 'music' ? currentTrack?.id || null : activeVideo?.id || null,
       activeType,
       playTrack,

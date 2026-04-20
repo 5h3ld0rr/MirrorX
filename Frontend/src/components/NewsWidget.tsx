@@ -33,7 +33,7 @@ export const NewsWidget = ({ location }: { location?: string }) => {
     try {
       const response = await axios.get('/api/helakuru/?category=1');
       const rawData = response.data?.news_data?.data || [];
-      const latest = rawData.slice(0, 3).map((item: any) => ({
+      const latest: NewsSnippet[] = rawData.slice(0, 3).map((item: any) => ({
         title: item.titleEn || item.titleSi,
         time: getRelativeTime(item.published),
         image: item.cover || item.thumb
