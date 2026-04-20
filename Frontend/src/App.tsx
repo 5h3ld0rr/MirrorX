@@ -30,8 +30,21 @@ import { ReminderWidget } from './components/ReminderWidget';
 import { SettingsWidget } from './components/SettingsWidget';
 import { NewsWidget } from './components/NewsWidget';
 
+interface UserProfile {
+  uid: string;
+  name: string;
+  email: string;
+  photoURL?: string;
+  accentColor?: string;
+  standByDelay?: number;
+  terminationDelay?: number;
+  rgbColor?: { r: number, g: number, b: number };
+  brightness?: number;
+  appBrightness?: number;
+}
+
 function App() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -39,7 +52,7 @@ function App() {
   const [activeApp, setActiveApp] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<string>('Idle');
   const isOnline = useOnlineStatus();
-  const faceAuthRef = useRef<any>(null);
+  const faceAuthRef = useRef<any>(null); // FaceAuth is a specific ref type usually
   const [bleDevice, setBleDevice] = useState<any>(null);
   const [bleCharacteristic, setBleCharacteristic] = useState<any>(null);
   const [bleConnected, setBleConnected] = useState(false);
