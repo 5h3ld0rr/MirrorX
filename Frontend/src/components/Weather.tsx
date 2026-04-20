@@ -21,7 +21,7 @@ export const Weather = memo(({ isActive }: { isActive: boolean }) => {
     const fetchWeather = async (lat: number, lon: number) => {
       try {
         const response = await axios.get(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`
+          `/api/weather/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`
         );
         setWeather(response.data.current);
       } catch (err) {

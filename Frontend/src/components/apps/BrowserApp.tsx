@@ -1,20 +1,17 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, RotateCcw, ChevronLeft, ChevronRight, Bookmark, Globe, ExternalLink, Shield } from 'lucide-react';
+import { RotateCcw, ChevronLeft, ChevronRight, Bookmark, Globe, Shield } from 'lucide-react';
 
 export const BrowserApp = () => {
   const [url, setUrl] = useState('https://www.google.com/search?igu=1');
   const [inputValue, setInputValue] = useState('https://google.com');
   const [history, setHistory] = useState<string[]>(['https://www.google.com/search?igu=1']);
   const [historyIndex, setHistoryIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const quickLinks = [
     { name: 'Google', url: 'https://www.google.com/search?igu=1', icon: 'https://www.google.com/favicon.ico' },
-    { name: 'Bing', url: 'https://www.bing.com', icon: 'https://www.bing.com/favicon.ico' },
     { name: 'Wikipedia', url: 'https://en.wikipedia.org', icon: 'https://en.wikipedia.org/favicon.ico' },
-    { name: 'GitHub', url: 'https://github.com', icon: 'https://github.com/favicon.ico' },
   ];
 
   const handleNavigate = (targetUrl: string) => {
@@ -39,8 +36,6 @@ export const BrowserApp = () => {
     newHistory.push(finalUrl);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
-    
-    setIsLoading(true);
   };
 
   const goBack = () => {
@@ -180,29 +175,17 @@ export const BrowserApp = () => {
             <iframe 
                 ref={iframeRef}
                 src={url}
-                onLoad={() => setIsLoading(false)}
                 style={{ 
                     width: '100%', 
                     height: '100%', 
                     border: 'none', 
                     background: 'white',
-                    display: isLoading ? 'none' : 'block'
                 }}
                 title="Browser Frame"
-                sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-scripts allow-same-origin"
+                sandbox="allow-forms allow-modals allow-scripts allow-same-origin"
             />
         )}
 
-        {isLoading && url && (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0c' }}>
-                <div className="glass-panel" style={{ padding: '2rem', borderRadius: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{ width: 40, height: 40, border: '3px solid var(--accent-glow)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%' }} className="animate-spin" />
-                    <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Encrypting Link...</span>
-                </div>
-            </div>
-        )}
-
-        {/* Iframe limitation warning (subtle) */}
         <div style={{ 
             position: 'absolute', bottom: '1rem', right: '1rem', 
             background: 'rgba(0,0,0,0.6)', padding: '0.5rem 1rem', borderRadius: '8px',

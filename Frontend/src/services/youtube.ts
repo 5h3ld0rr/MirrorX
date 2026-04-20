@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_KEY = import.meta.env.VITE_FIREBASE_API_KEY;
-const BASE_URL = 'https://www.googleapis.com/youtube/v3';
+const BASE_URL = '/api/google/youtube/v3';
 
 export interface YouTubeVideo {
   id: string;

@@ -10,7 +10,7 @@ export const WeatherApp = () => {
     const fetchWeather = async (lat: number, lon: number) => {
       try {
         const response = await axios.get(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`
+          `/api/weather/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`
         );
         setWeather(response.data.current);
         setForecast(response.data.daily.time.slice(1, 6).map((time: string, i: number) => ({

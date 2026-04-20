@@ -27,6 +27,7 @@ import { CONFIG } from './config';
 import { GlobalPlayer } from './components/GlobalPlayer';
 import { MusicWidget } from './components/MusicWidget';
 import { ReminderWidget } from './components/ReminderWidget';
+import { NewsWidget } from './components/NewsWidget';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -320,7 +321,8 @@ function App() {
         transition={{ duration: 1.5, ease: "easeOut" }}
         className="mirror-container"
       >
-        <div className="top-bar" style={{ justifyContent: 'flex-end' }}>
+        <div className="top-bar" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <NewsWidget isActive={hasInteracted || isAuthModalOpen} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
             <ReminderWidget user={user} isActive={hasInteracted || isAuthModalOpen} />
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>

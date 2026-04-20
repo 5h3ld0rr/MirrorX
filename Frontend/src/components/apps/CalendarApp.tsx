@@ -143,7 +143,7 @@ export const CalendarApp = ({ user }: { user: any }) => {
       try {
         const timeMin = `${year}-01-01T00:00:00Z`;
         const timeMax = `${year}-12-31T23:59:59Z`;
-        const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CAL_ID)}/events?key=${GOOGLE_API_KEY}&timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`;
+        const url = `/api/google/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CAL_ID)}/events?key=${GOOGLE_API_KEY}&timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`;
         
         const response = await axios.get(url);
         const items = response.data.items || [];
