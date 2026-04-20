@@ -118,6 +118,7 @@ export const youtubeService = {
         title: item.snippet.title,
         thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url || '',
         channelTitle: item.snippet.channelTitle,
+        channelId: item.snippet.channelId,
         publishedAt: item.snippet.publishedAt,
         viewCount: item.statistics?.viewCount,
         duration: item.contentDetails?.duration,
@@ -183,11 +184,22 @@ export const youtubeService = {
     }
   },
 
-  async getRelatedVideos(videoId: string, maxResults = 10): Promise<YouTubeVideo[]> {
+  async getRelatedVideos(videoId: string, title?: string, maxResults = 10): Promise<YouTubeVideo[]> {
     try {
+      // Re-applying the keyword-based search fallback. 
+      // The 'relatedToVideoId' parameter is heavily restricted/deprecated and causes 400 errors.
+      let searchQuery = title;
+      
+      if (!searchQuery) {
+        const details = await this.enrichVideoDetails([{ id: videoId, title: '', thumbnail: '', channelTitle: '', publishedAt: '' }]);
+        if (details.length > 0) {
+          searchQuery = details[0].title;
+        }
+      }
+
       const response = await youtubeApi.get('/search', {
         params: {
-          relatedToVideoId: videoId,
+          q: searchQuery || videoId,
           part: 'snippet',
           type: 'video',
           maxResults,
@@ -218,10 +230,8 @@ export const youtubeService = {
           part: 'snippet,statistics',
         },
       });
-
       const item = response.data.items?.[0];
       if (!item) return null;
-
       return {
         avatar: item.snippet.thumbnails.default?.url || '',
         subscriberCount: item.statistics.subscriberCount,
@@ -241,7 +251,6 @@ export const youtubeService = {
           part: 'snippet',
         },
       });
-
       const avatars: { [key: string]: string } = {};
       response.data.items?.forEach((item: any) => {
         avatars[item.id] = item.snippet.thumbnails.default?.url || '';
@@ -251,5 +260,5 @@ export const youtubeService = {
       console.error('Error fetching channels avatars:', error);
       return {};
     }
-  },
+  }
 };

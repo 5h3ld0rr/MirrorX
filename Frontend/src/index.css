@@ -382,3 +382,11 @@ div:hover > .hover-overlay button {
   border-color: rgba(255, 0, 255, 0.3) !important;
   box-shadow: 0 0 20px rgba(255, 0, 255, 0.1);
 }
+
+.cursor-none {
+  cursor: none !important;
+}
+
+.cursor-none * {
+  cursor: none !important;
+}
