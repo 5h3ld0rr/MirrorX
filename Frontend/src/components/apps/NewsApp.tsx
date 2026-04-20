@@ -12,26 +12,6 @@ interface NewsArticle {
   time: string;
 }
 
-interface EsanaBlock {
-  text?: string;
-  data?: string;
-}
-
-interface EsanaArticle {
-  category: number | string;
-  contentEn?: EsanaBlock[] | string;
-  contentSi?: EsanaBlock[] | string;
-  titleEn?: string;
-  titleSi?: string;
-  descriptionEn?: string;
-  descriptionSi?: string;
-  description?: string;
-  cover?: string;
-  thumb?: string;
-  share_url: string;
-  published?: string;
-}
-
 
 export const NewsApp = () => {
   const [activeCategory, setActiveCategory] = useState('All');
@@ -56,44 +36,52 @@ export const NewsApp = () => {
       const catId = categories[catName as keyof typeof categories];
       const response = await axios.get(`/api/helakuru/?category=${catId}`);
       
-      const rawData: EsanaArticle[] = response.data?.news_data?.data || [];
+      const rawData = response.data?.news_data?.data || [];
 
+      // Detect available categories from the 'All' feed
       if (catName === 'All' && rawData.length > 0) {
-        const foundIds = new Set(rawData.map((item: EsanaArticle) => String(item.category)));
+        const foundIds = new Set(rawData.map((item: any) => String(item.category)));
         const validNames = Object.keys(categories).filter(name => 
           name === 'All' || foundIds.has(categories[name as keyof typeof categories])
         );
         setAvailableCategories(validNames);
       }
       
+      // Filter by category client-side since the API returns a mixed feed
       const filteredData = (catName === 'All') 
         ? rawData 
-        : rawData.filter((item: EsanaArticle) => String(item.category) === catId);
+        : rawData.filter((item: any) => String(item.category) === catId);
 
-      const mapped: NewsArticle[] = filteredData.map((item: EsanaArticle) => {
+      const mapped = filteredData.map((item: any) => {
+        // Concatenate segments to form the "whole content"
         let fullContent = '';
         
-        const extractText = (content: EsanaBlock[] | string | undefined) => {
-          if (!content) return '';
+        const extractText = (content: any) => {
+          let text = '';
           if (Array.isArray(content)) {
-            return content.map(block => block.text || block.data).filter(Boolean).join('\n\n');
+            text = content.map((block: any) => block.text || block.data).filter(Boolean).join('\n\n');
+          } else {
+            text = typeof content === 'string' ? content.trim() : '';
           }
-          return content.trim();
+          // Strip HTML tags to resolve raw tag visibility and remove embedded links
+          return text.replace(/<[^>]*>?/gm, '');
         };
 
-        const enContent = extractText(item.contentEn).replace(/<[^>]*>?/gm, '');
-        const siContent = extractText(item.contentSi).replace(/<[^>]*>?/gm, '');
+        const enContent = extractText(item.contentEn);
+        const siContent = extractText(item.contentSi);
         
+        // Prioritize English if available, otherwise fallback to Sinhala
         fullContent = enContent || siContent;
 
+        // Final fallback to description fields
         if (!fullContent) {
            fullContent = item.descriptionEn || item.descriptionSi || item.description || '';
         }
 
         return {
-          title: item.titleEn || item.titleSi || 'Untitled Story',
+          title: item.titleEn || item.titleSi,
           description: fullContent,
-          image: item.cover || item.thumb || '',
+          image: item.cover || item.thumb,
           source: 'ESANA',
           link: item.share_url,
           time: item.published ? new Date(item.published).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today'
