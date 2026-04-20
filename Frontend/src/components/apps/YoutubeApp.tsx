@@ -191,7 +191,7 @@ export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: bool
     if (userActiveTimeout.current) clearTimeout(userActiveTimeout.current);
     userActiveTimeout.current = setTimeout(() => {
       setUserActive(false);
-    }, 3000);
+    }, 2000); // Hide after 2 seconds of inactivity
   };
 
   const loadTrending = async () => {
@@ -245,14 +245,15 @@ export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: bool
 
   return (
     <div 
-      className="app-content" 
+      className={`app-content ${(isPlaying && !userActive) ? 'cursor-none' : ''}`}
       onMouseMove={resetUserTimer}
+      onMouseDown={resetUserTimer}
+      onTouchStart={resetUserTimer}
       style={{ 
         display: 'flex', 
         flexDirection: 'column', 
         height: '100%', 
-        overflow: 'hidden',
-        cursor: (!isPlaying || userActive) ? 'auto' : 'none'
+        overflow: 'hidden'
       }}
     >
       {/* Navbar */}
@@ -340,7 +341,7 @@ export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: bool
                     <iframe
                         ref={iframeRef}
                         onLoad={() => setLoaded(true)}
-                        src={`https://www.youtube-nocookie.com/embed/${selectedVideo.id}?autoplay=1&playlist=${selectedVideo.id}&loop=1&origin=${window.location.origin}&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&controls=0&disablekb=1&widget_referrer=${window.location.origin}`}
+                        src={`https://www.youtube.com/embed/${selectedVideo.id}?autoplay=1&playlist=${selectedVideo.id}&loop=1&origin=${window.location.origin}&enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&controls=0&disablekb=1&widget_referrer=${window.location.origin}`}
                         style={{ 
                           position: 'absolute', 
                           top: 0, 
