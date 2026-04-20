@@ -4,7 +4,7 @@ import { auth } from '../lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { API_BASE_URL, exchangeToken } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, UserPlus, X } from 'lucide-react';
+import { ShieldCheck, UserPlus, X, Eye, EyeOff } from 'lucide-react';
 
 export const AuthModal = ({ isOpen, onClose, onUserAuth, isOnline }: {
   isOpen: boolean,
@@ -18,6 +18,7 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth, isOnline }: {
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -266,7 +267,35 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth, isOnline }: {
 
                 <div className="input-group">
                   <label>Password</label>
-                  <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      placeholder="••••••••" 
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)} 
+                      style={{ paddingRight: '3.5rem' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '0.5rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: 'rgba(255,255,255,0.4)',
+                        padding: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', marginTop: '1.5rem' }}>
