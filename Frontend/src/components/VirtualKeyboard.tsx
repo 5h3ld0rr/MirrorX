@@ -12,7 +12,6 @@ export const VirtualKeyboard = () => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
         setActiveInput(target as HTMLInputElement | HTMLTextAreaElement);
-        setIsExpanded(true);
       }
     };
     
@@ -61,12 +60,14 @@ export const VirtualKeyboard = () => {
 
   const updateInput = (newVal: string, newPos: number) => {
     if (!activeInput) return;
-    activeInput.value = newVal;
-    const tracker = (activeInput as any)._valueTracker;
-    if (tracker) {
-        tracker.setValue('');
-    }
-    // Dispatch input array so React's onChange fires
+    
+    // Safely bypass React's synthetic value setter to guarantee onChange triggers properly
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+      activeInput.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype,
+      "value"
+    )?.set;
+    
+    nativeInputValueSetter?.call(activeInput, newVal);
     activeInput.dispatchEvent(new Event('input', { bubbles: true }));
     activeInput.setSelectionRange(newPos, newPos);
   };
