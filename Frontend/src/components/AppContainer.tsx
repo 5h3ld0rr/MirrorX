@@ -9,7 +9,8 @@ import {
   Newspaper, 
   Play, 
   ShoppingBag, 
-  FileText 
+  FileText,
+  Globe
 } from 'lucide-react';
 
 // App Components
@@ -22,6 +23,7 @@ import { NewsApp } from './apps/NewsApp';
 import { YoutubeApp } from './apps/YoutubeApp';
 import { FashionApp } from './apps/FashionApp';
 import { MusicApp } from './apps/MusicApp';
+import { BrowserApp } from './apps/BrowserApp';
 
 interface AppContainerProps {
   activeApp: string | null;
@@ -57,6 +59,7 @@ export const AppContainer = ({ activeApp, onClose, user, onLogout, onUpdateUser,
       case 'News': return <NewsApp />;
       case 'UTube': return <YoutubeApp onInhibitSleep={onInhibitSleep} />;
       case 'Fashion': return <FashionApp />;
+      case 'Browser': return <BrowserApp />;
       default: return null;
     }
   };
@@ -73,6 +76,7 @@ export const AppContainer = ({ activeApp, onClose, user, onLogout, onUpdateUser,
       case 'Notes': return <FileText {...iconProps} />;
       case 'UTube': return <Play {...iconProps} />;
       case 'Fashion': return <ShoppingBag {...iconProps} />;
+      case 'Browser': return <Globe {...iconProps} />;
       default: return null;
     }
   };

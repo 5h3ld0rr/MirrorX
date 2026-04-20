@@ -9,7 +9,8 @@ import {
   Play,
   ShoppingBag,
   Newspaper,
-  FileText
+  FileText,
+  Globe
 } from 'lucide-react';
 
 export const AppLauncher = ({ isOpen, onClose, user, onLogout, onSelectApp }: {
@@ -28,6 +29,7 @@ export const AppLauncher = ({ isOpen, onClose, user, onLogout, onSelectApp }: {
     { name: 'Clock', icon: <Clock1 size={22} />, color: 'hsl(186, 100%, 50%)' },
     { name: 'UTube', icon: <Play size={22} />, color: 'hsl(0, 80%, 50%)' },
     { name: 'Fashion', icon: <ShoppingBag size={22} />, color: 'hsl(320, 100%, 65%)' },
+    { name: 'Browser', icon: <Globe size={22} />, color: 'hsl(186, 100%, 50%)' },
     { name: 'Settings', icon: <Settings size={22} />, color: 'hsl(240, 5%, 60%)' },
   ];
 

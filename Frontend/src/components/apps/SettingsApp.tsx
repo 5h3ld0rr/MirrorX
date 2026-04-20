@@ -116,9 +116,71 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
   // Chat State
   const [showChat, setShowChat] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
-  const [chatHistory, setChatHistory] = useState([
-    { role: 'assistant', content: "Hello! I'm the MirrorX Virtual Assistant. How can I help you today?" }
-  ]);
+  const [chatHistory, setChatHistory] = useState(() => {
+    const saved = localStorage.getItem('mirrorx_chat_history');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved chat history", e);
+      }
+    }
+    return [
+      { role: 'assistant', content: "Hello! I'm the MirrorX Virtual Assistant. How can I help you today?" }
+    ];
+  });
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatHistory, showChat]);
+
+  // Persist chat history
+  useEffect(() => {
+    localStorage.setItem('mirrorx_chat_history', JSON.stringify(chatHistory));
+  }, [chatHistory]);
+
+  const [isBotTyping, setIsBotTyping] = useState(false);
+
+  const getBotResponse = (msg: string) => {
+    const text = msg.toLowerCase();
+    
+    // Sinhala keywords detection
+    if (text.includes("kohomada") || text.includes("help")) return "I can help you with RGB Controller, Appearance settings, and Security. What would you like to know?";
+    if (text.includes("puluwanda")) return "Yes, I can assist you with any MirrorX platform features. Just ask!";
+    if (text.includes("mokakda") || text.includes("what is")) return "I am the MirrorX Neural Assistant, your personal gateway to mastering this OS.";
+    
+    // English keywords
+    if (text.includes("rgb") || text.includes("led") || text.includes("light")) return "To manage your RGB setup, head to the 'RGB Controller' tab. Make sure your ELK hardware is powered on!";
+    if (text.includes("color") || text.includes("appearance")) return "You can customize the accent color and system brightness in the 'Appearance' section.";
+    if (text.includes("safety") || text.includes("security") || text.includes("privacy")) return "MirrorX uses hardware-level encryption for your biometric data. It never leaves this device.";
+    if (text.includes("bluetooth") || text.includes("connect")) return "Ensure your device Bluetooth is active and seek the ELK strip in the RGB settings to pair.";
+    if (text.includes("hi") || text.includes("hello") || text.includes("hey")) return "Hello! MirrorX Assistant is online. How can I help you today?";
+    if (text.includes("thanks") || text.includes("thank")) return "You're welcome! I'm here if you need anything else.";
+    
+    return "I've logged your query. Our specialist neural agents are analyzing your request. Is there anything specific about the MirrorX tabs I can clarify for you now?";
+  };
+
+  const handleSendMessage = () => {
+    if (!chatMessage.trim() || isBotTyping) return;
+    
+    const userMsg = chatMessage.trim();
+    const newHist = [...chatHistory, { role: 'user', content: userMsg }];
+    setChatHistory(newHist);
+    setChatMessage('');
+    setIsBotTyping(true);
+
+    // Simulate "Neural Processing"
+    setTimeout(() => {
+      const response = getBotResponse(userMsg);
+      setChatHistory(prev => [...prev, { role: 'assistant', content: response }]);
+      setIsBotTyping(false);
+    }, 1500);
+  };
 
   // Save RGB settings to Firestore (debounced)
   const saveRgbToCloud = useCallback((color: { r: number, g: number, b: number }, bright: number) => {
@@ -1200,9 +1262,24 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
                     <p style={{ fontSize: '0.7rem', opacity: 0.8 }}>Online & ready to help</p>
                  </div>
               </div>
-              <button onClick={() => setShowChat(false)} style={{ background: 'rgba(0,0,0,0.1)', border: 'none', cursor: 'pointer', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                 <X size={18} />
-              </button>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                 <button 
+                   onClick={() => {
+                     if (confirm('Clear entire chat history?')) {
+                       const initial = [{ role: 'assistant', content: "Hello! I'm the MirrorX Virtual Assistant. How can I help you today?" }];
+                       setChatHistory(initial);
+                       localStorage.setItem('mirrorx_chat_history', JSON.stringify(initial));
+                     }
+                   }} 
+                   style={{ background: 'rgba(0,0,0,0.1)', border: 'none', cursor: 'pointer', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'black' }}
+                   title="Clear Chat"
+                 >
+                    <Zap size={14} />
+                 </button>
+                 <button onClick={() => setShowChat(false)} style={{ background: 'rgba(0,0,0,0.1)', border: 'none', cursor: 'pointer', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'black' }}>
+                    <X size={18} />
+                 </button>
+              </div>
            </div>
            
            <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(0,0,0,0.2)' }}>
@@ -1221,6 +1298,14 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
                    {chat.content}
                 </div>
               ))}
+              {isBotTyping && (
+                <div style={{ alignSelf: 'flex-start', background: 'rgba(255,255,255,0.05)', padding: '0.8rem 1.2rem', borderRadius: '4px 18px 18px 18px', display: 'flex', gap: '4px' }}>
+                   <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1 }} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                   <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                   <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                </div>
+              )}
+              <div ref={chatEndRef} />
            </div>
 
            <div style={{ padding: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '0.8rem' }}>
@@ -1229,30 +1314,17 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
                 value={chatMessage}
                 onChange={(e) => setChatMessage(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && chatMessage.trim()) {
-                    const newHist = [...chatHistory, { role: 'user', content: chatMessage }];
-                    setChatHistory(newHist);
-                    setChatMessage('');
-                    setTimeout(() => {
-                      setChatHistory([...newHist, { role: 'assistant', content: "Our support systems are currently undergoing a high-frequency neural calibration. A specialist will be with you shortly. Thank you for your patience." }]);
-                    }, 1000);
-                  }
+                  if (e.key === 'Enter') handleSendMessage();
                 }}
-                placeholder="Type your message..."
-                style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0.8rem 1rem', color: 'white', outline: 'none' }}
+                disabled={isBotTyping}
+                placeholder={isBotTyping ? "Assistant is thinking..." : "Type your message..."}
+                style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0.8rem 1rem', color: 'white', outline: 'none', opacity: isBotTyping ? 0.6 : 1 }}
               />
               <button 
-                onClick={() => {
-                  if (!chatMessage.trim()) return;
-                  const newHist = [...chatHistory, { role: 'user', content: chatMessage }];
-                  setChatHistory(newHist);
-                  setChatMessage('');
-                  setTimeout(() => {
-                    setChatHistory([...newHist, { role: 'assistant', content: "Our support systems are currently undergoing a high-frequency neural calibration. A specialist will be with you shortly. Thank you for your patience." }]);
-                  }, 1000);
-                }}
-                style={{ background: 'var(--accent-primary)', border: 'none', borderRadius: '12px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'black' }}>
-                 <Send size={20} />
+                onClick={handleSendMessage}
+                disabled={isBotTyping}
+                style={{ background: isBotTyping ? 'rgba(255,255,255,0.1)' : 'var(--accent-primary)', border: 'none', borderRadius: '12px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isBotTyping ? 'not-allowed' : 'pointer', color: 'black', transition: 'all 0.3s ease' }}>
+                 {isBotTyping ? <Loader2 size={18} className="animate-spin" /> : <Send size={20} />}
               </button>
            </div>
         </div>
