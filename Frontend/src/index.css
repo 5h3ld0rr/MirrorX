@@ -351,3 +351,28 @@ video {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* Fashion App Styles */
+.hover-overlay {
+  pointer-events: none;
+}
+
+div:hover > .hover-overlay {
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  pointer-events: auto;
+}
+
+.hover-overlay button {
+  transform: translateY(20px);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+div:hover > .hover-overlay button {
+  transform: translateY(0);
+}
+
+.glow-cyan {
+  filter: drop-shadow(0 0 10px #00f2ff);
+  color: #00f2ff;
+}
