@@ -31,7 +31,9 @@ router.get("/profile", verifyToken as any, async (req: Request, res: Response) =
       terminationDelay: preferences.terminationDelay !== undefined ? preferences.terminationDelay : (userData.terminationDelay !== undefined ? userData.terminationDelay : userData.logoutDelay),
       // Flatten RGB
       rgbColor: rgbController.r !== undefined ? { r: rgbController.r, g: rgbController.g, b: rgbController.b } : userData.rgbColor,
-      brightness: rgbController.brightness !== undefined ? rgbController.brightness : userData.brightness
+      brightness: rgbController.brightness !== undefined ? rgbController.brightness : userData.brightness,
+      // Widget Settings
+      widgetSettings: preferences.widgetSettings || userData.widgetSettings
     });
   } catch (error: any) {
     console.error("❌ Error fetching profile:", error.message);
@@ -79,6 +81,9 @@ router.patch("/profile", verifyToken as any, async (req: Request, res: Response)
     }
     if (req.body.brightness !== undefined) {
       updateData['preferences.rgbController.brightness'] = req.body.brightness;
+    }
+    if (req.body.widgetSettings !== undefined) {
+      updateData['preferences.widgetSettings'] = req.body.widgetSettings;
     }
 
     if (Object.keys(updateData).length === 0) {

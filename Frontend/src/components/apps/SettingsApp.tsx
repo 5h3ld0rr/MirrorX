@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap, Moon, Timer, MessageSquare, Cpu, FileText, X, Send, Bot } from 'lucide-react';
+import { User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap, Moon, Timer, MessageSquare, Cpu, FileText, X, Send, Bot, Music } from 'lucide-react';
 import { updateProfile, updateProfilePicture } from '../../lib/api';
 import { CONFIG } from '../../config';
 
@@ -65,6 +65,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
   
   const sections = [
     { title: 'Profile', icon: <User size={20} /> },
+    { title: 'Widgets', icon: <Cpu size={20} /> },
     { title: 'Notifications', icon: <Bell size={20} /> },
     { title: 'Security', icon: <Shield size={20} /> },
     { title: 'Appearance', icon: <Palette size={20} /> },
@@ -91,6 +92,14 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
   const [rgbSat] = useState(100);
   const [standByDelay, setStandByDelay] = useState(user.standByDelay || CONFIG.STANDBY_DELAY);
   const [terminationDelay, setTerminationDelay] = useState(user.terminationDelay || CONFIG.TERMINATION_DELAY);
+  
+  // Widget Customization State
+  const [widgetSettings, setWidgetSettings] = useState(user.widgetSettings || {
+    news: { enabled: true, location: 'top-left' },
+    clockWeather: { enabled: true, location: 'top-right' },
+    reminder: { enabled: true, location: 'top-right' },
+    music: { enabled: true, location: 'bottom-right' }
+  });
 
   // Sync state with user prop changes
   useEffect(() => {
@@ -104,6 +113,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
       setBrightness(user.brightness ?? 100);
       setStandByDelay(user.standByDelay || CONFIG.STANDBY_DELAY);
       setTerminationDelay(user.terminationDelay || CONFIG.TERMINATION_DELAY);
+      if (user.widgetSettings) setWidgetSettings(user.widgetSettings);
       
       if (user.rgbColor) {
         setRgbHue(rgbToHue(user.rgbColor.r, user.rgbColor.g, user.rgbColor.b));
@@ -181,7 +191,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
     // Simulate "Neural Processing"
     setTimeout(() => {
       const response = getBotResponse(userMsg);
-      setChatHistory(prev => [...prev, { role: 'assistant', content: response }]);
+      setChatHistory((prev: any) => [...prev, { role: 'assistant', content: response }]);
       setIsBotTyping(false);
     }, 1500);
   };
@@ -234,6 +244,18 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
       }
     }, 800);
   }, [onUpdateUser]);
+
+  const saveWidgetsToCloud = async (settings: any) => {
+    try {
+      await updateProfile({ widgetSettings: settings });
+      onUpdateUser({ widgetSettings: settings });
+      return true;
+    } catch (err) {
+      console.error('Failed to save widget settings:', err);
+      return false;
+    }
+  };
+
 
 
   // Cleanup save timer on unmount
@@ -767,6 +789,200 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
           </div>
         );
       }
+      
+      case 'Widgets': {
+        const locations = [
+          { label: 'Top Left', value: 'top-left' },
+          { label: 'Top Right', value: 'top-right' },
+          { label: 'Bottom Left', value: 'bottom-left' },
+          { label: 'Bottom Right', value: 'bottom-right' },
+        ];
+
+        const WidgetRow = ({ name, icon: Icon, id }: any) => {
+          const config = widgetSettings[id as keyof typeof widgetSettings] || { enabled: true, location: 'top-right' };
+          
+          return (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              padding: '1.25rem 1.5rem',
+              background: 'rgba(255, 255, 255, 0.02)',
+              borderRadius: '16px',
+              marginBottom: '0.75rem',
+              border: '1px solid rgba(255, 255, 255, 0.05)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                <div style={{ 
+                  width: '44px', 
+                  height: '44px', 
+                  borderRadius: '12px', 
+                  background: config.enabled ? 'var(--accent-glow)' : 'rgba(255, 255, 255, 0.05)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.3s ease'
+                }}>
+                  <Icon size={22} color={config.enabled ? "var(--accent-primary)" : "var(--text-muted)"} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 500, color: config.enabled ? 'white' : 'var(--text-muted)' }}>{name}</span>
+                  <div 
+                    onClick={() => {
+                        const newSettings = { 
+                          ...widgetSettings, 
+                          [id]: { ...config, enabled: !config.enabled } 
+                        };
+                        setWidgetSettings(newSettings);
+                    }}
+                    style={{ 
+                      width: '40px', 
+                      height: '20px', 
+                      background: config.enabled ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', 
+                      borderRadius: '10px', 
+                      position: 'relative',
+                      cursor: 'pointer',
+                      marginTop: '0.4rem',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    <div style={{ 
+                      position: 'absolute', 
+                      left: config.enabled ? '22px' : '2px', 
+                      top: '2px', 
+                      width: '16px', 
+                      height: '16px', 
+                      background: config.enabled ? 'black' : 'white', 
+                      borderRadius: '50%',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }} />
+                  </div>
+                </div>
+              </div>
+
+              {config.enabled && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-end' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Location</span>
+                  <select
+                    value={config.location}
+                    onChange={(e) => {
+                       const newSettings = { 
+                        ...widgetSettings, 
+                        [id]: { ...config, location: e.target.value } 
+                      };
+                      setWidgetSettings(newSettings);
+                    }}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: 'white',
+                      padding: '0.5rem 0.8rem',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      minWidth: '130px',
+                      appearance: 'none',
+                      backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E")',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 0.8rem center',
+                      paddingRight: '2rem'
+                    }}
+                  >
+                    {locations.map(loc => (
+                      <option key={loc.value} value={loc.value} style={{ background: '#1a1a1a' }}>{loc.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          );
+        };
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+             <header style={{ marginBottom: '1rem' }}>
+               <h2 style={{ fontSize: '2.2rem', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Widget Customization</h2>
+               <p style={{ color: 'var(--text-muted)' }}>Configure your dashboard modules.</p>
+             </header>
+
+             <div className="glass-panel" style={{ padding: '2rem', borderRadius: '24px' }}>
+                <WidgetRow name="News" icon={Cpu} id="news" />
+                <WidgetRow name="Reminders" icon={Timer} id="reminder" />
+                <WidgetRow name="Clock & Weather" icon={Sun} id="clockWeather" />
+                <WidgetRow name="Music" icon={Music} id="music" />
+
+                <div style={{ 
+                  marginTop: '2rem', 
+                  paddingTop: '2rem', 
+                  borderTop: '1px solid rgba(255,255,255,0.05)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    {(() => {
+                      const locations = Object.values(widgetSettings).filter((w: any) => w.enabled).map((w: any) => w.location);
+                      const hasOverlap = new Set(locations).size !== locations.length;
+                      if (hasOverlap) {
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#ff4d4d', fontSize: '0.9rem' }}>
+                            <Shield size={16} />
+                            <span>Warning: Multiple widgets assigned to same corner</span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Locations are unique. No overlaps detected.</p>
+                      );
+                    })()}
+                  </div>
+
+                  <button
+                    onClick={async () => {
+                      const locations = Object.values(widgetSettings).filter((w: any) => w.enabled).map((w: any) => w.location);
+                      const hasOverlap = new Set(locations).size !== locations.length;
+                      if (hasOverlap) return;
+
+                      setIsUpdating(true);
+                      const success = await saveWidgetsToCloud(widgetSettings);
+                      setIsUpdating(false);
+                      if (success) {
+                        setUpdateStatus('success');
+                        setTimeout(() => setUpdateStatus('idle'), 2000);
+                      }
+                    }}
+                    disabled={(() => {
+                      const locations = Object.values(widgetSettings).filter((w: any) => w.enabled).map((w: any) => w.location);
+                      return new Set(locations).size !== locations.length || isUpdating;
+                    })()}
+                    className="glass-panel"
+                    style={{
+                      padding: '0.8rem 2rem',
+                      borderRadius: '12px',
+                      background: 'var(--accent-primary)',
+                      color: 'black',
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      opacity: (() => {
+                        const locations = Object.values(widgetSettings).filter((w: any) => w.enabled).map((w: any) => w.location);
+                        return new Set(locations).size !== locations.length ? 0.5 : 1;
+                      })(),
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.8rem'
+                    }}
+                  >
+                    {isUpdating ? <Loader2 className="animate-spin" size={18} /> : (updateStatus === 'success' ? <Check size={18} /> : <Zap size={18} />)}
+                    {updateStatus === 'success' ? 'Saved' : 'Save Layout'}
+                  </button>
+                </div>
+             </div>
+          </div>
+        );
+      }
+
 
       case 'RGB Controller':
         return (
@@ -1287,7 +1503,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
            </div>
            
            <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(0,0,0,0.2)' }}>
-              {chatHistory.map((chat, idx) => (
+              {chatHistory.map((chat: any, idx: any) => (
                 <div key={idx} style={{ 
                   alignSelf: chat.role === 'user' ? 'flex-end' : 'flex-start',
                   maxWidth: '80%',

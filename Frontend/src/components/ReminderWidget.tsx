@@ -4,9 +4,10 @@ import { Bell, Clock } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
-export const ReminderWidget = ({ user }: { user: any }) => {
+export const ReminderWidget = ({ user, location }: { user: any, location?: string }) => {
   const [allEvents, setAllEvents] = useState<Record<string, { text: string, time: string }[]>>({});
   const [reminders, setReminders] = useState<{ text: string, time: string }[]>([]);
+  const isRightSide = location?.includes('right');
 
   useEffect(() => {
     if (!user?.uid) {
@@ -80,14 +81,14 @@ export const ReminderWidget = ({ user }: { user: any }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0, x: isRightSide ? 20 : -20 }}
       animate={{ 
         opacity: 1, 
         x: 0 
       }}
       className="glass-panel"
       style={{
-        padding: '1.2rem',
+        padding: '1rem',
         width: '300px',
         borderRadius: '24px',
         background: 'rgba(255, 255, 255, 0.03)',
@@ -96,13 +97,17 @@ export const ReminderWidget = ({ user }: { user: any }) => {
         display: 'flex',
         flexDirection: 'column',
         gap: '0.8rem',
-        position: 'fixed',
-        bottom: '2.5rem',
-        left: '2.5rem',
-        zIndex: 2000
+        textAlign: isRightSide ? 'right' : 'left'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '0.4rem' }}>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: isRightSide ? 'flex-end' : 'flex-start',
+        gap: '0.8rem', 
+        marginBottom: '0.4rem',
+        flexDirection: isRightSide ? 'row-reverse' : 'row'
+      }}>
         <div style={{
           width: '32px',
           height: '32px',
@@ -111,7 +116,8 @@ export const ReminderWidget = ({ user }: { user: any }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'var(--accent-primary)'
+          color: 'var(--accent-primary)',
+          flexShrink: 0
         }}>
           <Bell size={18} />
         </div>
@@ -128,14 +134,16 @@ export const ReminderWidget = ({ user }: { user: any }) => {
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
+              justifyContent: isRightSide ? 'flex-end' : 'flex-start',
               gap: '0.8rem',
               padding: '0.6rem 0.8rem',
               background: 'rgba(255, 255, 255, 0.02)',
               borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.05)'
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              flexDirection: isRightSide ? 'row-reverse' : 'row'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent-primary)', opacity: 0.8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--accent-primary)', opacity: 0.8, flexShrink: 0 }}>
               <Clock size={14} />
               <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{reminder.time}</span>
             </div>
