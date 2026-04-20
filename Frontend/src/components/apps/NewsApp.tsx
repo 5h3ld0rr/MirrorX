@@ -1,80 +1,309 @@
-import { motion } from 'framer-motion';
-import { ArrowRight, Share2, Bookmark } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
+import { RefreshCw, Globe, Zap } from 'lucide-react';
+
+interface NewsArticle {
+  title: string;
+  description: string;
+  image: string;
+  source: string;
+  link: string;
+  time: string;
+}
+
 
 export const NewsApp = () => {
-  const newsItems = [
-    { id: 1, title: 'MirrorX Platform Expands to Smart Home Hubs', category: 'Technology', image: 'https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?auto=format&fit=crop&q=80&w=400&h=250', time: '2 mins ago' },
-    { id: 2, title: 'AI Breakthrough in Real-time Face Recognition', category: 'Science', image: 'https://images.unsplash.com/photo-1507146426996-ef05306b995a?auto=format&fit=crop&q=80&w=400&h=250', time: '1 hour ago' },
-    { id: 3, title: 'The Future of Ambient Computing in Daily Life', category: 'Future', image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=400&h=250', time: '3 hours ago' },
-     { id: 4, title: 'New Sustainability Standards for Smart Devices', category: 'Environment', image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=400&h=250', time: '5 hours ago' },
-  ];
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [newsCache, setNewsCache] = useState<Record<string, NewsArticle[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const categories = {
+    'All': '1',
+    'Incidents': '2',
+    'Audio': '3',
+    'Alerts': '4',
+    'Statements': '5'
+  };
+
+  const [availableCategories, setAvailableCategories] = useState<string[]>(Object.keys(categories));
+
+  const fetchNews = async (catName: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const catId = categories[catName as keyof typeof categories];
+      const response = await axios.get(`/api/helakuru/?category=${catId}`);
+      
+      const rawData = response.data?.news_data?.data || [];
+
+      // Detect available categories from the 'All' feed
+      if (catName === 'All' && rawData.length > 0) {
+        const foundIds = new Set(rawData.map((item: any) => String(item.category)));
+        const validNames = Object.keys(categories).filter(name => 
+          name === 'All' || foundIds.has(categories[name as keyof typeof categories])
+        );
+        setAvailableCategories(validNames);
+      }
+      
+      // Filter by category client-side since the API returns a mixed feed
+      const filteredData = (catName === 'All') 
+        ? rawData 
+        : rawData.filter((item: any) => String(item.category) === catId);
+
+      const mapped = filteredData.map((item: any) => {
+        // Concatenate segments to form the "whole content"
+        let fullContent = '';
+        
+        const extractText = (content: any) => {
+          let text = '';
+          if (Array.isArray(content)) {
+            text = content.map((block: any) => block.text || block.data).filter(Boolean).join('\n\n');
+          } else {
+            text = typeof content === 'string' ? content.trim() : '';
+          }
+          // Strip HTML tags to resolve raw tag visibility and remove embedded links
+          return text.replace(/<[^>]*>?/gm, '');
+        };
+
+        const enContent = extractText(item.contentEn);
+        const siContent = extractText(item.contentSi);
+        
+        // Prioritize English if available, otherwise fallback to Sinhala
+        fullContent = enContent || siContent;
+
+        // Final fallback to description fields
+        if (!fullContent) {
+           fullContent = item.descriptionEn || item.descriptionSi || item.description || '';
+        }
+
+        return {
+          title: item.titleEn || item.titleSi,
+          description: fullContent,
+          image: item.cover || item.thumb,
+          source: 'ESANA',
+          link: item.share_url,
+          time: item.published ? new Date(item.published).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today'
+        };
+      });
+
+      setNewsCache(prev => ({ ...prev, [catName]: mapped }));
+    } catch (err: any) {
+      console.error("Esana fetch error:", err);
+      setError("Unable to update news feed. Please check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNews(activeCategory);
+  }, [activeCategory]);
+
+  const [heroOverwrites, setHeroOverwrites] = useState<Record<string, NewsArticle | null>>({});
+
+  const handleSwap = (category: string, newHero: NewsArticle) => {
+    setHeroOverwrites(prev => ({ ...prev, [category]: newHero }));
+  };
+
+  const renderNewsContent = () => {
+    let articles = [...(newsCache[activeCategory] || [])];
+
+    
+    if (articles.length === 0 && !loading) {
+
+        return (
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '4rem' }}>
+                <Globe size={48} style={{ marginBottom: '1rem', opacity: 0.2 }} />
+                <div>No news stories found in this section. Please try another category.</div>
+            </div>
+        );
+    }
+
+    // Handle swapping logic: New hero becomes index 0, previous hero moves to right top (index 1)
+    const selectedHero = heroOverwrites[activeCategory];
+    if (selectedHero && articles.length > 0) {
+        const foundIndex = articles.findIndex(a => a.link === selectedHero.link);
+        if (foundIndex > -1) {
+            const articleToPromote = articles.splice(foundIndex, 1)[0];
+            articles.unshift(articleToPromote);
+        }
+    }
+
+
+    // Using standardized internal format from getMap
+    const main = { ...articles[0] };
+    
+    // Apply high-res only for the featured hero slot (supports 1, 2, or 3 -> 6)
+    if (main.image) {
+        main.image = main.image.replace(/([123])\.(jpg|jpeg|png|webp|JPG|JPEG|PNG|WEBP)/i, '6.$2');
+    }
+
+    
+    const sides = articles.slice(1, 8);
+
+    return (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1fr)', gap: '3rem' }}>
+            {/* Main Featured News - Enhanced with Full Description */}
+            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} key={main.link}>
+                <div className="glass-panel" style={{ 
+                    borderRadius: '32px', 
+                    overflow: 'hidden', 
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'all 0.4s cubic-bezier(0.23, 1, 0.32, 1)',
+                    cursor: 'default'
+                }} 
+                >
+                    <div style={{ height: '380px', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+                        <img src={main.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={main.title} />
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 40%)' }} />
+                        <div style={{ position: 'absolute', bottom: '1.5rem', left: '2rem' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: '0.05em' }}>{main.time}</div>
+                        </div>
+                    </div>
+                    
+                    <div style={{ 
+                        padding: '2.5rem', 
+                        background: 'rgba(255,255,255,0.03)',
+                        flex: 1
+                    }}>
+                         <h2 style={{ 
+                             fontSize: '2.2rem', 
+                             fontWeight: 600, 
+                             color: 'white', 
+                             marginBottom: '1.5rem', 
+                             lineHeight: 1.2, 
+                             letterSpacing: '-0.01em',
+                             textShadow: '0 2px 10px rgba(0,0,0,0.3)'
+                         }}>
+                             {main.title}
+                         </h2>
+                         <p style={{ 
+                             color: 'rgba(255,255,255,0.85)', 
+                             fontSize: '1.25rem', 
+                             lineHeight: 1.8, 
+                             whiteSpace: 'pre-wrap',
+                             textShadow: '0 1px 4px rgba(0,0,0,0.2)'
+                         }}>
+                             {main.description || 'No description available for this story.'}
+                         </p>
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* Sidebar Feed - With Interactive Swap */}
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.5rem' }}>
+                    <Zap size={18} color="var(--accent-primary)" />
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: 'white', letterSpacing: '0.05em' }}>LATEST STREAM</span>
+                </div>
+                {sides.map((item, idx) => {
+                    return (
+                        <motion.div 
+                            key={item.link}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.05 }}
+                            whileHover={{ x: 8, background: 'rgba(255,255,255,0.03)' }}
+                            onClick={() => handleSwap(activeCategory, item)}
+                            style={{ 
+                                display: 'flex', 
+                                gap: '1.2rem', 
+                                marginBottom: '1rem', 
+                                cursor: 'pointer', 
+                                borderRadius: '16px',
+                                padding: '0.8rem',
+                                transition: 'background 0.3s'
+                            }}
+                        >
+
+                            <div style={{ width: '85px', height: '85px', borderRadius: '16px', overflow: 'hidden', flexShrink: 0 }}>
+                                <img src={item.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={item.title} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <h4 style={{ fontSize: '1rem', fontWeight: 500, color: 'white', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.title}</h4>
+                            </div>
+
+                        </motion.div>
+                    );
+                })}
+            </motion.div>
+
+        </div>
+    );
+  };
+
+  if (error && (!newsCache[activeCategory] || newsCache[activeCategory].length === 0)) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1.5rem', padding: '2rem' }}>
+        <Globe size={44} color="#ff4d4d" style={{ opacity: 0.5 }} />
+        <div style={{ fontSize: '1.1rem', color: '#ff4d4d', textAlign: 'center', maxWidth: '300px' }}>{error}</div>
+        <button 
+          onClick={() => fetchNews(activeCategory)}
+          style={{ padding: '0.6rem 1.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', cursor: 'pointer' }}
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  if (loading && (!newsCache[activeCategory] || newsCache[activeCategory].length === 0)) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '1.5rem' }}>
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
+            <RefreshCw size={44} color="var(--accent-primary)" />
+        </motion.div>
+        <div style={{ fontSize: '1.4rem', fontWeight: 500, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>UPDATING FEED...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="app-content" style={{ padding: '2rem 4rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
-        <div />
-        <div style={{ display: 'flex', gap: '1rem', width: '300px' }}>
-             <button className="glass-panel" style={{ padding: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', background: 'rgba(0, 242, 255, 0.1)', color: 'var(--accent-primary)' }}>
-                Top Stories
+    <div className="app-content" style={{ padding: '2rem 4rem', height: '100%', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '3rem', flexWrap: 'wrap' }}>
+        {availableCategories.map((cat) => (
+            <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                style={{
+                    padding: '0.8rem 1.8rem',
+                    textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: activeCategory === cat ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)',
+                    color: activeCategory === cat ? 'white' : 'rgba(255,255,255,0.6)',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    letterSpacing: '0.02em'
+                }}
+                onMouseEnter={(e) => {
+                    if (activeCategory !== cat) e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                    if (activeCategory !== cat) e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                }}
+            >
+                {cat}
             </button>
-            <button className="glass-panel" style={{ padding: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                Latest
-            </button>
-        </div>
+        ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '4rem' }}>
-        {/* Main News */}
-        <div>
-          <motion.div
-            whileHover={{ y: -5 }}
-            className="glass-panel"
-            style={{ padding: '2rem', background: 'rgba(255,255,255,0.03)', position: 'relative' }}
-          >
-            <div style={{ width: '100%', height: '400px', borderRadius: '16px', overflow: 'hidden', marginBottom: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
-                <img src={newsItems[0].image} alt="Main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-                <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1rem', color: 'var(--accent-primary)', fontWeight: 600 }}>{newsItems[0].category}</span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{newsItems[0].time}</span>
-            </div>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: 600, lineHeight: 1.3, marginBottom: '1.5rem' }}>{newsItems[0].title}</h1>
-            <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '2.5rem' }}>
-                The latest expansion of the MirrorX platform brings interactive widgets and ambient intelligence to smart home ecosystems globally, revolutionizing user experience.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button style={{ background: 'none', border: 'none', color: 'white', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                    Read Full Story <ArrowRight size={20} color="var(--accent-primary)" />
-                </button>
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <Share2 size={20} color="var(--text-muted)" cursor="pointer" />
-                    <Bookmark size={20} color="var(--text-muted)" cursor="pointer" />
-                </div>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Sidebar News */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-             <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-secondary)' }}>More News</h3>
-             {newsItems.slice(1).map((item) => (
-                <motion.div
-                    key={item.id}
-                    whileHover={{ x: 5, background: 'rgba(255,255,255,0.05)' }}
-                    className="glass-panel"
-                    style={{ padding: '1.2rem', background: 'rgba(255,255,255,0.02)', display: 'flex', gap: '1.5rem', alignItems: 'center', cursor: 'pointer' }}
-                >
-                    <div style={{ width: '120px', height: '80px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
-                         <img src={item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                    <div>
-                         <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--accent-primary)', fontWeight: 600, marginBottom: '0.3rem' }}>{item.category}</div>
-                         <h4 style={{ fontSize: '1rem', fontWeight: 600, lineHeight: 1.4, color: 'white' }}>{item.title}</h4>
-                    </div>
-                </motion.div>
-             ))}
-        </div>
-      </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeCategory}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          transition={{ duration: 0.35 }}
+        >
+          {renderNewsContent()}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };
