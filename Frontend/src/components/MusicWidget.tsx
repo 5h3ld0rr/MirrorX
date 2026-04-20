@@ -12,6 +12,13 @@ export const MusicWidget = ({ location }: { location?: string }) => {
 
   const isRightSide = location?.includes('right');
 
+  const formatTime = (seconds: number) => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -93,13 +100,19 @@ export const MusicWidget = ({ location }: { location?: string }) => {
       </div>
 
       {/* Progress Bar (Dynamic Sync) */}
-      <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-        <motion.div 
-          initial={{ width: 0 }}
-          animate={{ width: `${(progress / duration) * 100}%` }}
-          transition={{ type: 'spring', damping: 15, stiffness: 45 }}
-          style={{ height: '100%', background: 'var(--accent-primary)', borderRadius: '2px', boxShadow: '0 0 8px var(--accent-glow)' }}
-        />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+        <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: duration > 0 ? `${(progress / duration) * 100}%` : 0 }}
+            transition={{ type: 'spring', damping: 15, stiffness: 45 }}
+            style={{ height: '100%', background: 'var(--accent-primary)', borderRadius: '2px', boxShadow: '0 0 8px var(--accent-glow)' }}
+          />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+          <span>{formatTime(progress)}</span>
+          <span>{duration > 0 ? formatTime(duration) : '--:--'}</span>
+        </div>
       </div>
 
       {/* Advanced Controls */}

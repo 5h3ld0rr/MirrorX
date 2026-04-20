@@ -56,14 +56,17 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (newQueue) setQueue(newQueue);
     setIsPlaying(true);
     setActiveType('music');
-    setProgress(0); // Reset progress on new track
+    setProgress(0);
+    setDuration(0);
   }, []);
 
   const playVideo = useCallback((video: YouTubeVideo) => {
-    setCurrentTrack(null); // Stop background music
+    setCurrentTrack(null);
     setIsPlaying(true);
     setActiveVideo(video);
     setActiveType('video');
+    setProgress(0);
+    setDuration(0);
   }, []);
 
   const stopAll = useCallback(() => {
