@@ -10,16 +10,26 @@ export const VirtualKeyboard = () => {
   useEffect(() => {
     const handleFocus = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
         setActiveInput(target as HTMLInputElement | HTMLTextAreaElement);
+      }
+    };
+
+    const handleBlur = (e: FocusEvent) => {
+      const related = e.relatedTarget as HTMLElement;
+      if (!related || (related.tagName !== 'INPUT' && related.tagName !== 'TEXTAREA')) {
+        setActiveInput(null);
+        setIsExpanded(false);
       }
     };
     
     // Use capture phase to ensure we always get focus events globally
-    document.addEventListener('focus', handleFocus, true);
+    document.addEventListener('focusin', handleFocus, true);
+    document.addEventListener('focusout', handleBlur, true);
     
     return () => {
-      document.removeEventListener('focus', handleFocus, true);
+      document.removeEventListener('focusin', handleFocus, true);
+      document.removeEventListener('focusout', handleBlur, true);
     };
   }, []);
 
@@ -79,6 +89,8 @@ export const VirtualKeyboard = () => {
     ['{shift}', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '{backspace}'],
     ['@', '{space}', '{enter}']
   ];
+
+  if (!activeInput) return null;
 
   return (
     <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 10000, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem', pointerEvents: 'none' }}>
