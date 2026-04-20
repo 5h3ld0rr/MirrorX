@@ -40,14 +40,11 @@ export const register = async (req: Request, res: Response) => {
       }
     }
 
-    // Convert to Base64 for initial photoURL
-    const photoURL = `data:${(req as any).file.mimetype};base64,${photoBuffer.toString('base64')}`;
-
     // Save to Firestore with biometric descriptor
+    // Note: We no longer set photoURL to the scanned biometric photo per user request
     await db.collection("users").doc(userRecord.uid).set({
       name: name,
       email: email,
-      photoURL: photoURL,
       faceDescriptor: faceDescriptor,
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
@@ -61,8 +58,7 @@ export const register = async (req: Request, res: Response) => {
         user: {
           uid: userRecord.uid,
           name: name,
-          email: email,
-          photoURL: photoURL
+          email: email
         }
     });
 
