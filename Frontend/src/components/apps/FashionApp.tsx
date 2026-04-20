@@ -67,6 +67,7 @@ export const FashionApp = () => {
   const handleTryOn = (item: any) => {
     setSelectedItem(item);
     setIsTryingOn(true);
+    setGarmentPos({ x: 0, y: 0 }); // Ensure it's centered to start
     // Add class for active try on to hide cursor or add effects if needed
     startCamera();
   };
@@ -76,16 +77,104 @@ export const FashionApp = () => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const customItem = {
-          id: 'custom-' + Date.now(),
-          title: 'Custom Design',
-          brand: 'Guest Designer',
-          image: event.target?.result as string,
-          price: 'N/A',
-          category: 'Custom',
-          matchScore: 99
+        const imageUrl = event.target?.result as string;
+        
+        const img = new Image();
+        img.onload = () => {
+          // Resize if too large to prevent processing freezes
+          const MAX_SIZE = 800;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > MAX_SIZE || height > MAX_SIZE) {
+            const ratio = Math.min(MAX_SIZE / width, MAX_SIZE / height);
+            width = Math.floor(width * ratio);
+            height = Math.floor(height * ratio);
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            // Auto crop and trim white/light background
+            let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+            
+            // Detect background color (assuming studio shots)
+            const isBgColor = (r: number, g: number, b: number) => {
+              return r >= 230 && g >= 230 && b >= 230; // Close to white
+            };
+
+            for (let i = 0; i < data.length; i += 4) {
+              const r = data[i];
+              const g = data[i + 1];
+              const b = data[i + 2];
+              const a = data[i + 3];
+              
+              if (a < 50 || isBgColor(r, g, b)) {
+                data[i + 3] = 0; // Set Alpha to 0 (Transparent)
+              } else {
+                const x = (i / 4) % canvas.width;
+                const y = Math.floor((i / 4) / canvas.width);
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+              }
+            }
+            ctx.putImageData(imageData, 0, 0);
+            
+            // Trim image to fit content tightly
+            const padding = 10;
+            minX = Math.max(0, minX - padding);
+            minY = Math.max(0, minY - padding);
+            maxX = Math.min(canvas.width, maxX + padding);
+            maxY = Math.min(canvas.height, maxY + padding);
+
+            const trimWidth = Math.max(1, maxX - minX);
+            const trimHeight = Math.max(1, maxY - minY);
+            
+            if (trimWidth > 0 && trimHeight > 0) {
+              const trimCanvas = document.createElement('canvas');
+              trimCanvas.width = trimWidth;
+              trimCanvas.height = trimHeight;
+              const trimCtx = trimCanvas.getContext('2d');
+              if (trimCtx) {
+                // Paint trimmed content
+                trimCtx.drawImage(canvas, minX, minY, trimWidth, trimHeight, 0, 0, trimWidth, trimHeight);
+                const finalImage = trimCanvas.toDataURL('image/png');
+                
+                const customItem = {
+                  id: 'custom-' + Date.now(),
+                  title: 'AI Processed Upload',
+                  brand: 'Your Design',
+                  image: finalImage,
+                  price: 'N/A',
+                  category: 'Custom',
+                  matchScore: 100
+                };
+                setBlendMode('normal'); // Removed background works best with normal blending
+                handleTryOn(customItem);
+              }
+            } else {
+              // Fallback just in case finding dimensions failed
+              handleTryOn({
+                id: 'custom-' + Date.now(),
+                title: 'Custom Design',
+                brand: 'Your Upload',
+                image: imageUrl,
+                price: 'N/A',
+                category: 'Custom',
+                matchScore: 99
+              });
+            }
+          }
         };
-        handleTryOn(customItem);
+        img.src = imageUrl;
       };
       reader.readAsDataURL(file);
     }
@@ -772,7 +861,7 @@ const VirtualTryOnModal = ({
                         key={item.id}
                         drag
                         dragMomentum={false}
-                        onDrag={(_, info) => setGarmentPos({ x: info.point.x, y: info.point.y })}
+                        onDrag={(_, info) => setGarmentPos(prev => ({ x: prev.x + info.delta.x, y: prev.y + info.delta.y }))}
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ 
                           opacity: processing ? 0.1 : opacity, 
