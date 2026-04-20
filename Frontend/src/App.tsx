@@ -28,6 +28,7 @@ import { GlobalPlayer } from './components/GlobalPlayer';
 import { MusicWidget } from './components/MusicWidget';
 import { ReminderWidget } from './components/ReminderWidget';
 import { NewsWidget } from './components/NewsWidget';
+import { VoiceAssistant } from './components/VoiceAssistant';
 
 interface UserProfile {
   uid: string;
@@ -46,7 +47,7 @@ interface UserProfile {
 }
 
 function App() {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<UserProfile | null>();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -367,6 +368,7 @@ function App() {
         transition={{ duration: 1.5, ease: "easeOut" }}
         className="mirror-container"
       >
+        <VoiceAssistant user={user}/>
         {/* Dynamic Widget Corners */}
         <div style={{ position: 'fixed', top: '2rem', left: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'flex-start', zIndex: 2000, pointerEvents: 'none' }}>
            {getWidgetsForLocation('top-left')}
@@ -384,7 +386,7 @@ function App() {
            {getWidgetsForLocation('bottom-right')}
         </div>
 
-        {!user && (
+        {user===null && (
           <FaceAuth
             ref={faceAuthRef}
             onUserAuth={(u) => handleAuth(u, true)}
