@@ -30,6 +30,7 @@ import { MusicWidget } from './components/MusicWidget';
 import { ReminderWidget } from './components/ReminderWidget';
 import { NewsWidget } from './components/NewsWidget';
 import { VoiceAssistant } from './components/VoiceAssistant';
+import { VirtualKeyboard } from './components/VirtualKeyboard';
 
 interface UserProfile {
   uid: string;
@@ -502,6 +503,7 @@ function App() {
           bleCharacteristic={bleCharacteristic}
           user={user}
         />
+        <VirtualKeyboard />
       </motion.div>
       <div style={{
         position: 'fixed',
