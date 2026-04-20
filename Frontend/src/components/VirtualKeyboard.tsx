@@ -12,6 +12,10 @@ export const VirtualKeyboard = () => {
     const handleFocus = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        const type = target.getAttribute('type');
+        if (type && ['range', 'checkbox', 'radio', 'button', 'submit', 'color', 'file'].includes(type.toLowerCase())) {
+            return;
+        }
         setActiveInput(target as HTMLInputElement | HTMLTextAreaElement);
       }
     };
@@ -22,13 +26,33 @@ export const VirtualKeyboard = () => {
         setActiveInput(null);
       }
     };
+
+    const handlePointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.virtual-keyboard-panel')) return;
+      
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+         const type = target.getAttribute('type');
+         if (!type || !['range', 'checkbox', 'radio', 'button', 'submit', 'color', 'file'].includes(type.toLowerCase())) {
+             setActiveInput(target as HTMLInputElement | HTMLTextAreaElement);
+             return;
+         }
+      }
+      
+      setActiveInput(null);
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+         (document.activeElement as HTMLElement).blur();
+      }
+    };
     
     document.addEventListener('focus', handleFocus, true);
     document.addEventListener('blur', handleBlur, true);
+    document.addEventListener('pointerdown', handlePointerDown, true);
     
     return () => {
       document.removeEventListener('focus', handleFocus, true);
       document.removeEventListener('blur', handleBlur, true);
+      document.removeEventListener('pointerdown', handlePointerDown, true);
     };
   }, []);
 
@@ -100,7 +124,7 @@ export const VirtualKeyboard = () => {
              animate={{ opacity: 1, y: 0, scale: keyboardScale }}
              exit={{ opacity: 0, y: 50, scale: 0.8 }}
              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-             className="glass-panel"
+             className="glass-panel virtual-keyboard-panel"
              style={{ 
                pointerEvents: 'auto',
                position: 'absolute',
@@ -157,7 +181,10 @@ export const VirtualKeyboard = () => {
                  <motion.button 
                    whileHover={{ scale: 1.1, color: 'white' }} whileTap={{ scale: 0.9 }}
                    style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '0.2rem' }} 
-                   onClick={() => setActiveInput(null)}
+                   onClick={() => {
+                     setActiveInput(null);
+                     if (activeInput) activeInput.blur();
+                   }}
                  >
                     <X size={20} />
                  </motion.button>
