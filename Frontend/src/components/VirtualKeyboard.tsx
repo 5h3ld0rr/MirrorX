@@ -24,12 +24,12 @@ export const VirtualKeyboard = () => {
     };
     
     // Use capture phase to ensure we always get focus events globally
-    document.addEventListener('focusin', handleFocus, true);
-    document.addEventListener('focusout', handleBlur, true);
+    document.addEventListener('focus', handleFocus, true);
+    document.addEventListener('blur', handleBlur, true);
     
     return () => {
-      document.removeEventListener('focusin', handleFocus, true);
-      document.removeEventListener('focusout', handleBlur, true);
+      document.removeEventListener('focus', handleFocus, true);
+      document.removeEventListener('blur', handleBlur, true);
     };
   }, []);
 
@@ -185,6 +185,7 @@ export const VirtualKeyboard = () => {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsExpanded(!isExpanded)}
+          onMouseDown={(e) => e.preventDefault()}
           className="glass-panel"
           style={{ 
             pointerEvents: 'auto',
