@@ -88,6 +88,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
   const [rgbColor, setRgbColor] = useState(user.rgbColor || { r: 255, g: 0, b: 0 });
   const [brightness, setBrightness] = useState(user.brightness ?? 100);
   const [ledPower, setLedPower] = useState(true);
+  const [musicSyncEnabled, setMusicSyncEnabled] = useState(user.musicSyncEnabled || false);
   const [rgbHue, setRgbHue] = useState(0);
   const [rgbSat] = useState(100);
   const [standByDelay, setStandByDelay] = useState(user.standByDelay || CONFIG.STANDBY_DELAY);
@@ -111,6 +112,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
       setAppBrightness(user.appBrightness ?? 100);
       setRgbColor(user.rgbColor || { r: 255, g: 0, b: 0 });
       setBrightness(user.brightness ?? 100);
+      setMusicSyncEnabled(user.musicSyncEnabled || false);
       setStandByDelay(user.standByDelay || CONFIG.STANDBY_DELAY);
       setTerminationDelay(user.terminationDelay || CONFIG.TERMINATION_DELAY);
       if (user.widgetSettings) setWidgetSettings(user.widgetSettings);
@@ -1084,7 +1086,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
                 filter: bleConnected ? 'grayscale(0) blur(0px)' : 'grayscale(0.8) blur(3px)'
               }}>
                 {/* Power Toggle */}
-                <div className="glass-panel" style={{ padding: '1.5rem 2rem', borderRadius: '24px', marginBottom: '2rem' }}>
+                <div className="glass-panel" style={{ padding: '1.5rem 2rem', borderRadius: '24px', marginBottom: '1.5rem' }}>
                   <div
                     onClick={() => {
                       if (!bleConnected) return;
@@ -1119,6 +1121,55 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
                         left: bleConnected && ledPower ? '27px' : '3px', top: '3px',
                         width: '20px', height: '20px',
                         background: bleConnected && ledPower ? 'white' : 'rgba(255,255,255,0.7)',
+                        borderRadius: '50%',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Music Sync Toggle */}
+                <div className="glass-panel" style={{ padding: '1.5rem 2rem', borderRadius: '24px', marginBottom: '2rem' }}>
+                  <div
+                    onClick={async () => {
+                      if (!bleConnected) return;
+                      const next = !musicSyncEnabled;
+                      setMusicSyncEnabled(next);
+                      try {
+                        await updateProfile({ musicSyncEnabled: next });
+                        onUpdateUser({ musicSyncEnabled: next });
+                      } catch (e) {
+                        console.error("Failed to save Music Sync preference", e);
+                      }
+                    }}
+                    style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      cursor: bleConnected ? 'pointer' : 'not-allowed' 
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <Music size={22} color={bleConnected && musicSyncEnabled ? 'var(--accent-primary)' : 'var(--text-muted)'} />
+                      <div>
+                        <h4 style={{ fontSize: '1.05rem', color: bleConnected ? 'white' : 'var(--text-muted)' }}>Adaptive Music Sync</h4>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          LEDs pulse to the beat of your music automatically
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{
+                      width: '50px', height: '26px',
+                      background: bleConnected && musicSyncEnabled ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)',
+                      borderRadius: '20px', position: 'relative',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        left: bleConnected && musicSyncEnabled ? '27px' : '3px', top: '3px',
+                        width: '20px', height: '20px',
+                        background: bleConnected && musicSyncEnabled ? 'black' : 'rgba(255,255,255,0.7)',
                         borderRadius: '50%',
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.2)'

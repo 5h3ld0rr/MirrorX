@@ -25,6 +25,7 @@ import { AppContainer } from './components/AppContainer';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { CONFIG } from './config';
 import { GlobalPlayer } from './components/GlobalPlayer';
+import { MusicSyncManager } from './components/MusicSyncManager';
 import { MusicWidget } from './components/MusicWidget';
 import { ReminderWidget } from './components/ReminderWidget';
 import { NewsWidget } from './components/NewsWidget';
@@ -41,6 +42,7 @@ interface UserProfile {
   rgbColor?: { r: number, g: number, b: number };
   brightness?: number;
   appBrightness?: number;
+  musicSyncEnabled?: boolean;
   widgetSettings?: {
     [key: string]: { enabled: boolean; location: string };
   };
@@ -215,6 +217,8 @@ function App() {
     setIsLauncherOpen(false);
     setActiveApp(null);
   };
+
+
 
   // Synchronize Global Accent Color
   useEffect(() => {
@@ -493,6 +497,11 @@ function App() {
 
         {/* Global Multimedia Layer */}
         <GlobalPlayer />
+        <MusicSyncManager 
+          bleConnected={bleConnected}
+          bleCharacteristic={bleCharacteristic}
+          user={user}
+        />
       </motion.div>
       <div style={{
         position: 'fixed',
