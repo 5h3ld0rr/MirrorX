@@ -9,10 +9,11 @@ interface NewsSnippet {
   image: string;
 }
 
-export const NewsWidget = () => {
+export const NewsWidget = ({ location }: { location?: string }) => {
   const [news, setNews] = useState<NewsSnippet[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const isRightSide = location?.includes('right');
 
   const getRelativeTime = (publishedAt: string) => {
     if (!publishedAt) return 'Just now';
@@ -63,18 +64,19 @@ export const NewsWidget = () => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0, x: isRightSide ? 20 : -20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
+      exit={{ opacity: 0, x: isRightSide ? 20 : -20 }}
       className="glass-panel"
       style={{
-        padding: '0.8rem 1.2rem',
-        borderRadius: '16px',
+        padding: '0.8rem',
         maxWidth: '420px',
         display: 'flex',
+        flexDirection: isRightSide ? 'row-reverse' : 'row',
         alignItems: 'center',
         gap: '1.2rem',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        textAlign: isRightSide ? 'right' : 'left'
       }}
     >
       <div style={{ 
@@ -106,7 +108,14 @@ export const NewsWidget = () => {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.5 }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+            <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: isRightSide ? 'flex-end' : 'space-between', 
+                gap: '0.6rem',
+                marginBottom: '0.2rem',
+                flexDirection: isRightSide ? 'row-reverse' : 'row'
+            }}>
                 <span style={{ 
                     fontSize: '0.65rem', 
                     fontWeight: 700, 

@@ -40,6 +40,9 @@ interface UserProfile {
   rgbColor?: { r: number, g: number, b: number };
   brightness?: number;
   appBrightness?: number;
+  widgetSettings?: {
+    [key: string]: { enabled: boolean; location: string };
+  };
 }
 
 function App() {
@@ -319,6 +322,36 @@ function App() {
     }
   };
 
+  const getWidgetsForLocation = (location: string) => {
+    const settings = user?.widgetSettings || {
+      news: { enabled: true, location: 'top-left' },
+      clockWeather: { enabled: true, location: 'top-right' },
+      reminder: { enabled: true, location: 'top-right' },
+      music: { enabled: true, location: 'bottom-right' }
+    };
+
+    const widgets = [];
+    if (settings.news?.enabled && settings.news?.location === location) {
+      widgets.push(<div key="news" style={{ pointerEvents: 'auto' }}><NewsWidget location={location} /></div>);
+    }
+    if (settings.reminder?.enabled && settings.reminder?.location === location) {
+      widgets.push(<div key="reminder" style={{ pointerEvents: 'auto' }}><ReminderWidget user={user} location={location} /></div>);
+    }
+    if (settings.clockWeather?.enabled && settings.clockWeather?.location === location) {
+      widgets.push(
+        <div key="clockWeather" style={{ pointerEvents: 'auto', display: 'flex', flexDirection: 'column', alignItems: location.includes('right') ? 'flex-end' : 'flex-start', gap: '1rem' }}>
+          <Clock location={location} />
+          <Weather location={location} />
+        </div>
+      );
+    }
+    if (settings.music?.enabled && settings.music?.location === location) {
+      widgets.push(<div key="music" style={{ pointerEvents: 'auto' }}><MusicWidget location={location} /></div>);
+    }
+    
+    return widgets;
+  };
+
   return (
     <>
       <FluidBackground />
@@ -334,15 +367,21 @@ function App() {
         transition={{ duration: 1.5, ease: "easeOut" }}
         className="mirror-container"
       >
-        <div className="top-bar" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <NewsWidget />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-            <ReminderWidget user={user} />
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
-              <Clock />
-              <Weather />
-            </div>
-          </div>
+        {/* Dynamic Widget Corners */}
+        <div style={{ position: 'fixed', top: '2rem', left: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'flex-start', zIndex: 2000, pointerEvents: 'none' }}>
+           {getWidgetsForLocation('top-left')}
+        </div>
+
+        <div style={{ position: 'fixed', top: '2rem', right: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'flex-end', zIndex: 2000, pointerEvents: 'none' }}>
+           {getWidgetsForLocation('top-right')}
+        </div>
+
+        <div style={{ position: 'fixed', bottom: '2rem', left: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'flex-start', zIndex: 2000, pointerEvents: 'none' }}>
+           {getWidgetsForLocation('bottom-left')}
+        </div>
+
+        <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'flex-end', zIndex: 2000, pointerEvents: 'none' }}>
+           {getWidgetsForLocation('bottom-right')}
         </div>
 
         {!user && (
@@ -452,7 +491,6 @@ function App() {
 
         {/* Global Multimedia Layer */}
         <GlobalPlayer />
-        {user && <MusicWidget isIdle={!activeApp} />}
       </motion.div>
       <div style={{
         position: 'fixed',

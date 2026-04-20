@@ -30,7 +30,8 @@ export const updateProfile = async (data: {
   standbyDelay?: number, // Legacy field for mapping support
   logoutDelay?: number,  // Legacy field for mapping support
   standByDelay?: number,
-  terminationDelay?: number
+  terminationDelay?: number,
+  widgetSettings?: any
 }) => {
   const token = await auth.currentUser?.getIdToken();
   if (!token) throw new Error("No authenticated user");

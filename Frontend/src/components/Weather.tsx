@@ -12,8 +12,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { CONFIG } from '../config';
 
-export const Weather = memo(() => {
+export const Weather = memo(({ location }: { location?: string }) => {
   const [weather, setWeather] = useState<any>(null);
+  const isRightSide = location?.includes('right');
 
   useEffect(() => {
     const fetchWeather = async (lat: number, lon: number) => {
@@ -58,16 +59,22 @@ export const Weather = memo(() => {
     <AnimatePresence>
       <motion.div
         transition={{ duration: 1 }}
-        initial={{ opacity: 0, x: 20 }}
+        initial={{ opacity: 0, x: isRightSide ? 20 : -20 }}
         animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 20 }}
+        exit={{ opacity: 0, x: isRightSide ? 20 : -20 }}
         style={{
-          width: '280px',
-          textAlign: 'right',
-          padding: '1.2rem 1.5rem',
+          padding: '1.2rem 0',
+          textAlign: isRightSide ? 'right' : 'left'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1.2rem', marginBottom: '1rem' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: isRightSide ? 'flex-end' : 'flex-start',
+          gap: '1.2rem', 
+          marginBottom: '1rem',
+          flexDirection: isRightSide ? 'row-reverse' : 'row'
+        }}>
           <div>
             <div style={{ fontSize: '2.5rem', fontWeight: 300, color: 'white', lineHeight: 1 }}>{Math.round(weather.temperature_2m)}°</div>
             <div style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '0.4rem' }}>{condition.desc}</div>
@@ -79,8 +86,8 @@ export const Weather = memo(() => {
 
         <div style={{
           display: 'flex',
-          justifyContent: 'flex-end',
           gap: '1.2rem',
+          justifyContent: isRightSide ? 'flex-end' : 'flex-start',
           borderTop: '1px solid hsla(0,0%,100%,0.05)',
           paddingTop: '0.8rem'
         }}>

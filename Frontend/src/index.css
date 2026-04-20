@@ -250,10 +250,6 @@ button:hover {
   box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
 }
 
-.clock-display {
-  text-align: right;
-}
-
 .time {
   font-size: 5rem;
   font-weight: 300;
