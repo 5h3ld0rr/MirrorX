@@ -337,7 +337,7 @@ function App() {
       >
         <div className="top-bar" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <NewsWidget isActive={hasInteracted || isAuthModalOpen} />
+            <NewsWidget />
             <SettingsWidget 
               user={user} 
               isActive={hasInteracted || isAuthModalOpen} 
@@ -345,10 +345,10 @@ function App() {
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-            <ReminderWidget user={user} isActive={hasInteracted || isAuthModalOpen} />
+            <ReminderWidget user={user} />
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
               <Clock />
-              <Weather isActive={hasInteracted || isAuthModalOpen} />
+              <Weather />
             </div>
           </div>
         </div>

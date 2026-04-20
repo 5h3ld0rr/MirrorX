@@ -64,7 +64,13 @@ export const MusicApp = () => {
           ].map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                setActiveTab(item.id);
+                if (item.id === 'Explore') {
+                  setSearchQuery('');
+                  loadTrending();
+                }
+              }}
               className="glass-panel"
               style={{
                 padding: '0.8rem',
@@ -120,7 +126,7 @@ export const MusicApp = () => {
 
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
-              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} style={{ width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.1)', borderTopColor: '#ff3d3d', borderRadius: '50%' }} />
+              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} style={{ width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%' }} />
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '2rem', paddingBottom: '2rem' }}>

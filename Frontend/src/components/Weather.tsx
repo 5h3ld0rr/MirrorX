@@ -12,12 +12,10 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { CONFIG } from '../config';
 
-export const Weather = memo(({ isActive }: { isActive: boolean }) => {
+export const Weather = memo(() => {
   const [weather, setWeather] = useState<any>(null);
 
   useEffect(() => {
-    if (!isActive) return;
-
     const fetchWeather = async (lat: number, lon: number) => {
       try {
         const response = await axios.get(
@@ -41,7 +39,7 @@ export const Weather = memo(({ isActive }: { isActive: boolean }) => {
     }, CONFIG.WEATHER_REFRESH_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [isActive]);
+  }, []);
 
   const getCondition = (code: number) => {
     if (code === 0) return { desc: 'Clear Night', icon: <Sun size={32} /> };

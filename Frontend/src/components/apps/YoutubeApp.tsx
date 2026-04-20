@@ -12,6 +12,8 @@ export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: bool
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [userActive, setUserActive] = useState(true);
+  const userActiveTimeout = useRef<any>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -180,8 +182,17 @@ export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: bool
     return () => {
       // Use a functional check to avoid stale closure if activeType changes
       if (activeType === 'video') stopAll();
+      if (userActiveTimeout.current) clearTimeout(userActiveTimeout.current);
     };
   }, []);
+
+  const resetUserTimer = () => {
+    setUserActive(true);
+    if (userActiveTimeout.current) clearTimeout(userActiveTimeout.current);
+    userActiveTimeout.current = setTimeout(() => {
+      setUserActive(false);
+    }, 3000);
+  };
 
   const loadTrending = async () => {
     setLoading(true);
@@ -233,7 +244,17 @@ export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: bool
   }, []);
 
   return (
-    <div className="app-content" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div 
+      className="app-content" 
+      onMouseMove={resetUserTimer}
+      style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        height: '100%', 
+        overflow: 'hidden',
+        cursor: (!isPlaying || userActive) ? 'auto' : 'none'
+      }}
+    >
       {/* Navbar */}
       <div style={{ padding: '1rem 2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ flexShrink: 0 }}>
@@ -349,8 +370,8 @@ export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: bool
                       <motion.div 
                         initial={false}
                         animate={{ 
-                          opacity: isHovering || !isPlaying ? 1 : 0,
-                          scale: isHovering || !isPlaying ? 1 : 0.8
+                          opacity: !isPlaying || (isHovering && userActive) ? 1 : 0,
+                          scale: !isPlaying || (isHovering && userActive) ? 1 : 0.8
                         }}
                         style={{ 
                           background: 'rgba(255,255,255,0.05)', 
@@ -387,9 +408,9 @@ export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: bool
                           display: 'flex', 
                           flexDirection: 'column', 
                           background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
-                          opacity: (!isPlaying || isHovering) ? 1 : 0,
+                          opacity: (!isPlaying || (isHovering && userActive)) ? 1 : 0,
                           transition: 'opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                          pointerEvents: (isHovering || !isPlaying) ? 'auto' : 'none',
+                          pointerEvents: ((isHovering && userActive) || !isPlaying) ? 'auto' : 'none',
                           zIndex: 20
                         }}
                       >
