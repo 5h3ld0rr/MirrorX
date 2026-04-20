@@ -27,6 +27,7 @@ import { CONFIG } from './config';
 import { GlobalPlayer } from './components/GlobalPlayer';
 import { MusicWidget } from './components/MusicWidget';
 import { ReminderWidget } from './components/ReminderWidget';
+import { SettingsWidget } from './components/SettingsWidget';
 import { NewsWidget } from './components/NewsWidget';
 
 function App() {
@@ -322,7 +323,14 @@ function App() {
         className="mirror-container"
       >
         <div className="top-bar" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <NewsWidget isActive={hasInteracted || isAuthModalOpen} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <NewsWidget isActive={hasInteracted || isAuthModalOpen} />
+            <SettingsWidget 
+              user={user} 
+              isActive={hasInteracted || isAuthModalOpen} 
+              onClick={() => setActiveApp('Settings')} 
+            />
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
             <ReminderWidget user={user} isActive={hasInteracted || isAuthModalOpen} />
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '1rem' }}>
