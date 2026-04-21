@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
-import { Star, X, Trash2 } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { updateProfile, API_BASE_URL } from '../../lib/api';
