@@ -1,32 +1,54 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 import { Cloud, Sun, CloudRain, Wind, Droplets, MapPin, Search } from 'lucide-react';
 
 export const WeatherApp = () => {
   const [weather, setWeather] = useState<any>(null);
   const [forecast, setForecast] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchCity, setSearchCity] = useState('');
+  const [locationName, setLocationName] = useState('New York, US');
+
+  const fetchWeather = async (lat: number, lon: number, name?: string) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(
+        `/api/weather/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`
+      );
+      setWeather(response.data.current);
+      setForecast(response.data.daily.time.slice(1, 6).map((time: string, i: number) => ({
+        time,
+        maxTemp: Math.round(response.data.daily.temperature_2m_max[i + 1]),
+        minTemp: Math.round(response.data.daily.temperature_2m_min[i + 1]),
+        code: response.data.daily.weather_code[i + 1]
+      })));
+      if (name) setLocationName(name);
+    } catch (err) {
+      console.error("Weather error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchCity.trim()) return;
+    try {
+      const geoRes = await axios.get(`/api/geocoding/v1/search?name=${encodeURIComponent(searchCity)}&count=1&language=en&format=json`);
+      if (geoRes.data.results && geoRes.data.results.length > 0) {
+        const city = geoRes.data.results[0];
+        fetchWeather(city.latitude, city.longitude, `${city.name}, ${city.country_code.toUpperCase()}`);
+        setSearchCity('');
+      }
+    } catch (err) {
+      console.error("Geocoding error:", err);
+    }
+  };
 
   useEffect(() => {
-    const fetchWeather = async (lat: number, lon: number) => {
-      try {
-        const response = await axios.get(
-          `/api/weather/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`
-        );
-        setWeather(response.data.current);
-        setForecast(response.data.daily.time.slice(1, 6).map((time: string, i: number) => ({
-          time,
-          maxTemp: Math.round(response.data.daily.temperature_2m_max[i + 1]),
-          minTemp: Math.round(response.data.daily.temperature_2m_min[i + 1]),
-          code: response.data.daily.weather_code[i + 1]
-        })));
-      } catch (err) {
-        console.error("Weather error:", err);
-      }
-    };
-
     navigator.geolocation.getCurrentPosition(
-      (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-      () => fetchWeather(40.7128, -74.0060) // Default to NYC
+      (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, "Your Location"),
+      () => fetchWeather(40.7128, -74.0060, "New York, US")
     );
   }, []);
 
@@ -47,25 +69,46 @@ export const WeatherApp = () => {
     return 'Stormy';
   };
 
-  if (!weather) return <div style={{ padding: '2rem' }}>Loading weather...</div>;
+  if (loading || !weather) return (
+    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+        <motion.div 
+          animate={{ rotate: 360 }} 
+          transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+          style={{ width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', margin: '0 auto 1rem' }}
+        />
+        <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.1rem' }}>Loading conditions...</div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="app-content" style={{ padding: '2rem 4rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
           <MapPin size={24} color="var(--accent-primary)" />
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 600 }}>New York, US</h2>
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 600 }}>{locationName}</h2>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', width: '300px' }}>
+        <div style={{ display: 'flex', gap: '1rem', width: '350px' }}>
           <div style={{ position: 'relative', flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-            <Search size={18} style={{ position: 'absolute', left: '1rem', color: 'rgba(255,255,255,0.4)' }} />
+            <Search size={18} style={{ position: 'absolute', left: '1rem', color: 'rgba(255,255,255,0.4)', zIndex: 1 }} />
             <input 
               type="text" 
               placeholder="Search city..." 
+              value={searchCity}
+              onChange={(e) => setSearchCity(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               className="glass-panel" 
-              style={{ width: '100%', padding: '0.7rem 1rem 0.7rem 2.8rem', borderRadius: '12px', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }} 
+              style={{ width: '100%', padding: '0.9rem 1rem 0.9rem 2.8rem', borderRadius: '18px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '1rem', outline: 'none', transition: 'all 0.3s' }} 
             />
           </div>
+          <button 
+            onClick={handleSearch}
+            className="glass-panel"
+            style={{ padding: '0 1.5rem', borderRadius: '18px', background: 'var(--accent-primary)', color: 'black', fontWeight: 700, border: 'none', cursor: 'pointer' }}
+          >
+            Find
+          </button>
         </div>
       </div>
 

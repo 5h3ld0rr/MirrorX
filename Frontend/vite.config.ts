@@ -20,6 +20,11 @@ export default defineConfig(() => {
           target: 'https://www.googleapis.com',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api\/google/, '')
+        },
+        '/api/geocoding': {
+          target: 'https://geocoding-api.open-meteo.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/geocoding/, '')
         }
       }
     },
