@@ -23,7 +23,7 @@ export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: bool
   const [channelDetails, setChannelDetails] = useState<{ avatar: string; subscriberCount: string } | null>(null);
   const [channelAvatars, setChannelAvatars] = useState<{ [key: string]: string }>({});
   const [activeTag, setActiveTag] = useState('All');
-  const { playVideo, currentTrack, activeType, stopAll, isPlaying, volume, togglePlay, setVolume, progress, duration, setProgress, setDuration } = useMusic();
+  const { playVideo, currentTrack, activeType, stopAll, isPlaying, volume, togglePlay, setVolume, toggleMute, progress, duration, setProgress, setDuration } = useMusic();
 
   const selectedVideo = activeType === 'video' ? currentTrack : null;
 
@@ -477,8 +477,11 @@ export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: bool
                             </button>
                             <button style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: '0.5rem', opacity: 0.8 }}><SkipForward size={22} fill="white" /></button>
                             
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }} onMouseEnter={() => {}} onMouseLeave={() => {}}>
-                                <button onClick={(e) => { e.stopPropagation(); setVolume(volume === 0 ? 70 : 0); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }}>
+                                <button 
+                                  onClick={toggleMute} 
+                                  style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: '0.5rem', display: 'flex', alignItems: 'center' }}
+                                >
                                     {volume === 0 ? <VolumeX size={22} /> : <Volume2 size={22} />}
                                 </button>
                                 <div style={{ width: isHovering ? '60px' : '0px', height: '3px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', position: 'relative', transition: 'width 0.2s ease', overflow: 'hidden' }}>

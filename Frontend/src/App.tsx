@@ -185,6 +185,19 @@ function App() {
   };
 
   const disconnectBLE = async () => {
+    if (bleCharacteristic) {
+      try {
+        // HANDOVER: Restore hardware state for mobile app before disconnecting
+        // 1. Force Sensitivity 100
+        await bleCharacteristic.writeValue(new Uint8Array([0x7E, 0x07, 0x06, 0x64, 0x00, 0x00, 0x00, 0x00, 0xEF]));
+        // 2. Force Mode 0x00 (Rock / Internal Mic)
+        await bleCharacteristic.writeValue(new Uint8Array([0x7E, 0x07, 0x03, 0x00, 0x03, 0xFF, 0xFF, 0x00, 0xEF]));
+        await new Promise(r => setTimeout(r, 200));
+      } catch (e) {
+        console.warn('Silent handover failed:', e);
+      }
+    }
+    
     if (bleDevice?.gatt?.connected) {
       bleDevice.gatt.disconnect();
     }
@@ -352,7 +365,11 @@ function App() {
       );
     }
     if (settings.music?.enabled && settings.music?.location === location) {
-      widgets.push(<div key="music" style={{ pointerEvents: 'auto' }}><MusicWidget location={location} /></div>);
+      widgets.push(
+        <div key="music" style={{ pointerEvents: 'auto' }}>
+          <MusicWidget />
+        </div>
+      );
     }
     
     return widgets;

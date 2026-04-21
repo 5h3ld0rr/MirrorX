@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Music, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Search, Volume2, Plus } from 'lucide-react';
+import { Music, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Search, Volume2, VolumeX, Plus } from 'lucide-react';
 import type { YouTubeVideo } from '../../services/youtube';
 import { youtubeService } from '../../services/youtube';
 import { useMusic } from '../../context/MusicContext';
 
 export const MusicApp = () => {
-  const { currentTrack, isPlaying, playTrack, togglePlay, setVolume, volume, skipForward, skipBackward, activeType, progress, duration, setProgress: updateGlobalProgress } = useMusic();
+  const { currentTrack, isPlaying, playTrack, togglePlay, setVolume, toggleMute, volume, skipForward, skipBackward, activeType, progress, duration, setProgress: updateGlobalProgress } = useMusic();
   const [activeTab, setActiveTab] = useState('Explore');
   const [songs, setSongs] = useState<YouTubeVideo[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -261,7 +261,12 @@ export const MusicApp = () => {
 
             {/* Volume */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', justifyContent: 'flex-end', width: '30%' }}>
-              <Volume2 size={20} color="rgba(255,255,255,0.5)" />
+              <button 
+                onClick={toggleMute}
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: '0.4rem', display: 'flex', alignItems: 'center' }}
+              >
+                {volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              </button>
               <input
                 type="range"
                 min="0"

@@ -19,6 +19,7 @@ interface MusicContextType {
   resumeTrack: () => void;
   togglePlay: () => void;
   setVolume: (volume: number) => void;
+  toggleMute: () => void;
   setProgress: (seconds: number) => void;
   skipForward: () => void;
   skipBackward: () => void;
@@ -101,6 +102,10 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addToQueue = useCallback((track: YouTubeVideo) => {
     setQueue(prev => [...prev, track]);
   }, []);
+  const toggleMute = useCallback(() => {
+    setVolume(prev => prev === 0 ? 70 : 0);
+  }, []);
+
   return (
     <MusicContext.Provider value={{
       currentTrack: activeType === 'music' ? currentTrack : activeVideo,
@@ -119,6 +124,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       resumeTrack,
       togglePlay,
       setVolume,
+      toggleMute,
       setProgress,
       skipForward,
       skipBackward,

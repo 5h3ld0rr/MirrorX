@@ -9,5 +9,8 @@ export const CONFIG = {
   MAX_FACE_SCAN_FAIL_COUNT: 5,
 
   // Weather Settings
-  WEATHER_REFRESH_INTERVAL: 600000 // 10 minutes
+  WEATHER_REFRESH_INTERVAL: 600000, // 10 minutes
+
+  // Multimedia Settings
+  DEFAULT_MUSIC_SYNC: true, // Music-reactive LEDs off by default
 };
