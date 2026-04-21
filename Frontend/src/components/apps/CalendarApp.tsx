@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Star, X, Trash2 } from 'lucide-react';
+import { Star, X, Trash2 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { updateProfile, API_BASE_URL } from '../../lib/api';
@@ -414,7 +414,9 @@ export const CalendarApp = ({ user }: { user: any }) => {
                 onClick={handlePrevMonth} 
                 style={{ width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'transparent', border: 'none', color: '#ffffff' }}
               >
-                <ArrowLeft size={24} strokeWidth={3} />
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
               </motion.button>
               <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
               <motion.button 
@@ -423,7 +425,9 @@ export const CalendarApp = ({ user }: { user: any }) => {
                 onClick={handleNextMonth} 
                 style={{ width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'transparent', border: 'none', color: '#ffffff' }}
               >
-                <ArrowRight size={24} strokeWidth={3} />
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
               </motion.button>
             </div>
           </div>
@@ -432,83 +436,136 @@ export const CalendarApp = ({ user }: { user: any }) => {
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }} className="hide-scrollbar">
         {viewMode === 'month' && (
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(7, 1fr)', 
-            gap: '0.8rem', 
-            height: 'fit-content', 
-            perspective: '1000px',
-            padding: '2px'
-          }}>
-            {days.map(day => (
-              <div key={day} style={{ 
-                color: 'var(--text-muted)', 
-                fontWeight: 800, 
-                fontSize: '0.85rem', 
-                textAlign: 'center', 
-                paddingBottom: '0.8rem', 
-                textTransform: 'uppercase', 
-                letterSpacing: '0.2em',
-                opacity: 0.6
-              }}>
-                {day}
+          <>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(7, 1fr)', 
+              gap: '0.8rem', 
+              height: 'fit-content', 
+              perspective: '1000px',
+              padding: '2px'
+            }}>
+              {days.map(day => (
+                <div key={day} style={{ 
+                  color: 'var(--text-muted)', 
+                  fontWeight: 800, 
+                  fontSize: '0.85rem', 
+                  textAlign: 'center', 
+                  paddingBottom: '0.8rem', 
+                  textTransform: 'uppercase', 
+                  letterSpacing: '0.2em',
+                  opacity: 0.6
+                }}>
+                  {day}
+                </div>
+              ))}
+              
+              {Array.from({ length: getFirstDayOfMonth(year, viewDate.getMonth()) }).map((_, i) => (
+                <div key={`blank-${i}`} style={{ background: 'rgba(255,255,255,0.01)', borderRadius: '16px', margin: '1px', opacity: 0.2 }} />
+              ))}
+
+              {Array.from({ length: getDaysInMonth(year, viewDate.getMonth()) }, (_, i) => i + 1).map(dayNum => {
+                const m = viewDate.getMonth() + 1;
+                const dStr = `${year}-${String(m).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                const holiday = holidays[dStr];
+                const customE = userEvents[dStr] || [];
+                const isToday = dayNum === today.getDate() && viewDate.getMonth() === today.getMonth() && viewDate.getFullYear() === today.getFullYear();
+
+                return (
+                  <motion.button
+                    key={dayNum}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: (dayNum % 7) * 0.01 }}
+                    whileHover={{ 
+                      y: -8, 
+                      scale: 1.02,
+                      background: isToday ? 'linear-gradient(135deg, var(--accent-primary) 20%, #0088ff 100%)' : 'rgba(255,255,255,0.08)',
+                      boxShadow: isToday ? '0 30px 60px rgba(0, 242, 255, 0.3)' : '0 20px 40px rgba(0,0,0,0.5)',
+                      zIndex: 10,
+                      border: isToday ? '3px solid white' : '1px solid rgba(255,255,255,0.3)'
+                    }}
+                    onClick={() => { setSelectedDate(dStr); setShowEventModal(true); }}
+                    style={{ 
+                      textAlign: 'left', 
+                      padding: '1rem', 
+                      borderRadius: '24px', 
+                      border: isToday ? '2px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.05)',
+                      background: isToday 
+                        ? 'linear-gradient(135deg, var(--accent-primary) 0%, #00d2ff 100%)' 
+                        : holiday 
+                          ? 'rgba(255, 255, 255, 0.04)' 
+                          : 'rgba(255, 255, 255, 0.02)',
+                      backdropFilter: 'blur(8px)',
+                      color: isToday ? '#ffffff' : 'rgba(255,255,255,0.9)', 
+                      cursor: 'pointer', 
+                      position: 'relative', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '4px',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      minHeight: '100px'
+                    }}
+                  >
+                    <div style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 0.9 }}>{dayNum}</div>
+                    {holiday && <div style={{ fontSize: '0.6rem', color: isToday ? '#ffffff' : getDayTypeColor(holiday.type), fontWeight: 700, borderRadius: '4px', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{holiday.name}</div>}
+                    {customE.length > 0 && <div style={{ marginTop: 'auto', display: 'flex', gap: '2px' }}>{customE.map((_, idx) => <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'black' : 'var(--accent-primary)' }} />)}</div>}
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* Monthly Summary Section */}
+            <div style={{ marginTop: '4rem', padding: '0 1rem 5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>
+                  {months[viewDate.getMonth()]}'s Schedule
+                </h3>
+                <div style={{ padding: '0.6rem 1.2rem', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-primary)' }}>
+                  {Object.keys(userEvents).filter(d => d.startsWith(`${year}-${String(viewDate.getMonth() + 1).padStart(2, '0')}`)).length} EVENTS
+                </div>
               </div>
-            ))}
-            
-            {Array.from({ length: getFirstDayOfMonth(year, viewDate.getMonth()) }).map((_, i) => (
-              <div key={`blank-${i}`} style={{ background: 'rgba(255,255,255,0.01)', borderRadius: '16px', margin: '1px', opacity: 0.2 }} />
-            ))}
 
-            {Array.from({ length: getDaysInMonth(year, viewDate.getMonth()) }, (_, i) => i + 1).map(dayNum => {
-              const m = viewDate.getMonth() + 1;
-              const dStr = `${year}-${String(m).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-              const holiday = holidays[dStr];
-              const customE = userEvents[dStr] || [];
-              const isToday = dayNum === today.getDate() && viewDate.getMonth() === today.getMonth() && viewDate.getFullYear() === today.getFullYear();
-
-              return (
-                <motion.button
-                  key={dayNum}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: (dayNum % 7) * 0.01 }}
-                  whileHover={{ 
-                    y: -8, 
-                    scale: 1.02,
-                    background: isToday ? 'linear-gradient(135deg, var(--accent-primary) 20%, #0088ff 100%)' : 'rgba(255,255,255,0.08)',
-                    boxShadow: isToday ? '0 30px 60px rgba(0, 242, 255, 0.3)' : '0 20px 40px rgba(0,0,0,0.5)',
-                    zIndex: 10,
-                    border: isToday ? '3px solid white' : '1px solid rgba(255,255,255,0.3)'
-                  }}
-                  onClick={() => { setSelectedDate(dStr); setShowEventModal(true); }}
-                  style={{ 
-                    textAlign: 'left', 
-                    padding: '1rem', 
-                    borderRadius: '24px', 
-                    border: isToday ? '2px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.05)',
-                    background: isToday 
-                      ? 'linear-gradient(135deg, var(--accent-primary) 0%, #00d2ff 100%)' 
-                      : holiday 
-                        ? 'rgba(255, 255, 255, 0.04)' 
-                        : 'rgba(255, 255, 255, 0.02)',
-                    backdropFilter: 'blur(8px)',
-                    color: isToday ? '#ffffff' : 'rgba(255,255,255,0.9)', 
-                    cursor: 'pointer', 
-                    position: 'relative', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    gap: '4px',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    minHeight: '100px'
-                  }}
-                >
-                  <div style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 0.9 }}>{dayNum}</div>
-                  {holiday && <div style={{ fontSize: '0.6rem', color: isToday ? '#ffffff' : getDayTypeColor(holiday.type), fontWeight: 700, borderRadius: '4px', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{holiday.name}</div>}
-                  {customE.length > 0 && <div style={{ marginTop: 'auto', display: 'flex', gap: '2px' }}>{customE.map((_, idx) => <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'black' : 'var(--accent-primary)' }} />)}</div>}
-                </motion.button>
-              );
-            })}
-          </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.2rem' }}>
+                {Object.keys(userEvents)
+                  .filter(d => d.startsWith(`${year}-${String(viewDate.getMonth() + 1).padStart(2, '0')}`))
+                  .sort()
+                  .map(dKey => (
+                    userEvents[dKey].map(ev => (
+                      <motion.div
+                        key={ev.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="glass-panel"
+                        style={{ 
+                          padding: '1.5rem', 
+                          borderRadius: '24px', 
+                          background: 'rgba(255,255,255,0.03)',
+                          borderLeft: '4px solid var(--accent-primary)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.8rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                            {new Date(dKey).toLocaleDateString('default', { day: 'numeric', month: 'long' })}
+                          </span>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-primary)' }}>{ev.time}</span>
+                        </div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{ev.text}</div>
+                      </motion.div>
+                    ))
+                  ))}
+                
+                {Object.keys(userEvents).filter(d => d.startsWith(`${year}-${String(viewDate.getMonth() + 1).padStart(2, '0')}`)).length === 0 && (
+                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', background: 'rgba(255,255,255,0.01)', borderRadius: '24px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                    <div style={{ opacity: 0.3, fontWeight: 600 }}>No events scheduled for this month.</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
         )}
 
         {viewMode === 'year' && (
