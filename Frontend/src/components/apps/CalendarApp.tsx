@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Star, X, Trash2 } from 'lucide-react';
 import axios from 'axios';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
+import { ArrowLeft, ArrowRight, Star, X, Trash2 } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { doc, onSnapshot, collection, addDoc, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { updateProfile, API_BASE_URL } from '../../lib/api';
 
 const GOOGLE_CAL_ID = 'en.lk#holiday@group.v.calendar.google.com';
 const GOOGLE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY;
 
-const WheelItem = ({ value, index, y, itemHeight, isInfinite, totalOptions }: { value: string, index: number, y: any, itemHeight: number, isInfinite: boolean, totalOptions: number }) => {
+const WheelItem = ({ value, index, y, itemHeight, isInfinite, totalOptions, onSelect }: { value: string, index: number, y: any, itemHeight: number, isInfinite: boolean, totalOptions: number, onSelect: (val: string) => void }) => {
   const itemY = index * itemHeight;
   const wrapRange = totalOptions * itemHeight;
 
@@ -52,6 +53,8 @@ const WheelItem = ({ value, index, y, itemHeight, isInfinite, totalOptions }: { 
         perspective: '1200px',
         transformStyle: 'preserve-3d'
       }}
+      onTap={() => onSelect(value)}
+      whileTap={{ scale: 0.9, opacity: 0.6 }}
     >
       {value}
     </motion.div>
@@ -115,7 +118,20 @@ const ScrollWheel = ({ options, value, onChange, width = '80px', isInfinite = fa
         {!isInfinite && <div style={{ position: 'absolute', height: `${options.length * itemHeight + 165}px`, width: '100%', top: 0 }} />}
         
         {options.map((opt, i) => (
-          <WheelItem key={`${opt}-${i}`} value={opt} index={i} y={y} itemHeight={itemHeight} isInfinite={isInfinite} totalOptions={options.length} />
+          <WheelItem 
+            key={`${opt}-${i}`} 
+            value={opt} 
+            index={i} 
+            y={y} 
+            itemHeight={itemHeight} 
+            isInfinite={isInfinite} 
+            totalOptions={options.length} 
+            onSelect={(val) => {
+              const idx = options.indexOf(val);
+              animate(y, -idx * itemHeight, { type: 'spring', stiffness: 450, damping: 45 });
+              onChange(val);
+            }}
+          />
         ))}
       </motion.div>
     </div>
@@ -143,16 +159,19 @@ export const CalendarApp = ({ user }: { user: any }) => {
       try {
         const timeMin = `${year}-01-01T00:00:00Z`;
         const timeMax = `${year}-12-31T23:59:59Z`;
-        const url = `/api/google/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CAL_ID)}/events?key=${GOOGLE_API_KEY}&timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`;
+        const url = `${API_BASE_URL}/google/calendar/v3/calendars/${encodeURIComponent(GOOGLE_CAL_ID)}/events?key=${GOOGLE_API_KEY}&timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`;
         
         const response = await axios.get(url);
         const items = response.data.items || [];
         const mapped: Record<string, any> = {};
 
         items.forEach((item: any) => {
-          const date = item.start.date || item.start.dateTime.split('T')[0];
-          let type = 'national';
-          const lowerName = item.summary.toLowerCase();
+          if (!item.start) return;
+          const date = item.start.date || (item.start.dateTime && item.start.dateTime.split('T')[0]);
+          if (!date) return;
+          
+          let type: 'buddhist'|'christian'|'hindu'|'muslim'|'national' = 'national';
+          const lowerName = (item.summary || '').toLowerCase();
           
           if (lowerName.includes('poya')) type = 'buddhist';
           else if (lowerName.includes('ramazan') || lowerName.includes('hadji') || lowerName.includes('id-ul')) type = 'muslim';
@@ -174,20 +193,12 @@ export const CalendarApp = ({ user }: { user: any }) => {
   useEffect(() => {
     if (!user?.uid) return;
 
-    const eventsRef = collection(db, 'users', user.uid, 'events');
-    const unsubscribe = onSnapshot(eventsRef, (snapshot) => {
-      const mapped: Record<string, { text: string, time: string, id: string }[]> = {};
-      snapshot.docs.forEach(doc => {
-        const data = doc.data();
-        const date = data.date;
-        if (!mapped[date]) mapped[date] = [];
-        mapped[date].push({ 
-          text: data.text, 
-          time: data.time, 
-          id: doc.id 
-        });
-      });
-      setUserEvents(mapped);
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUserEvents(data.calendarEvents || {});
+      }
     }, (err) => {
       console.error("Calendar Firestore Error:", err);
     });
@@ -226,29 +237,44 @@ export const CalendarApp = ({ user }: { user: any }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showModal]);
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const addEvent = async () => {
     if (!eventInput.trim() || !selectedDate || !user?.uid) return;
+    setIsSaving(true);
     
     try {
-      const eventsRef = collection(db, 'users', user.uid, 'events');
-      await addDoc(eventsRef, {
-        date: selectedDate,
+      const newEvent = {
         text: eventInput.trim(),
         time: timeInput,
-        createdAt: new Date().toISOString()
-      });
+        id: Math.random().toString(36).substr(2, 9)
+      };
+
+      const updatedEvents = { ...userEvents };
+      if (!updatedEvents[selectedDate]) updatedEvents[selectedDate] = [];
+      updatedEvents[selectedDate] = [...updatedEvents[selectedDate], newEvent];
+
+      await updateProfile({ calendarEvents: updatedEvents });
+      
       setEventInput('');
+      setTimeout(() => setIsSaving(false), 1000);
     } catch (error) {
       console.error("Firestore Save Error:", error);
+      setIsSaving(false);
     }
   };
 
   const deleteEvent = async (eventId: string) => {
-    if (!user?.uid || !eventId) return;
+    if (!user?.uid || !selectedDate) return;
     
     try {
-      const eventDocRef = doc(db, 'users', user.uid, 'events', eventId);
-      await deleteDoc(eventDocRef);
+      const updatedEvents = { ...userEvents };
+      if (updatedEvents[selectedDate]) {
+        updatedEvents[selectedDate] = updatedEvents[selectedDate].filter(e => e.id !== eventId);
+        if (updatedEvents[selectedDate].length === 0) delete updatedEvents[selectedDate];
+      }
+
+      await updateProfile({ calendarEvents: updatedEvents });
     } catch (error) {
       console.error("Firestore Delete Error:", error);
     }
@@ -258,22 +284,14 @@ export const CalendarApp = ({ user }: { user: any }) => {
   const [pickerM, setPickerM] = useState('00');
   const [pickerP, setPickerP] = useState('AM');
 
+  // Unified time logic
   useEffect(() => {
-    const [h, m] = timeInput.split(':').map(Number);
-    const p = h >= 12 ? 'PM' : 'AM';
-    const h12 = h % 12 || 12;
-    setPickerH(h12.toString());
-    setPickerM(m.toString().padStart(2, '0'));
-    setPickerP(p);
-  }, [timeInput]);
-
-  const updateFromPicker = (newH: string, newM: string, newP: string) => {
-    let h = parseInt(newH);
-    if (newP === 'PM' && h < 12) h += 12;
-    if (newP === 'AM' && h === 12) h = 0;
-    const formatted = `${h.toString().padStart(2, '0')}:${newM}`;
+    let h = parseInt(pickerH);
+    if (pickerP === 'PM' && h < 12) h += 12;
+    if (pickerP === 'AM' && h === 12) h = 0;
+    const formatted = `${h.toString().padStart(2, '0')}:${pickerM}`;
     setTimeInput(formatted);
-  };
+  }, [pickerH, pickerM, pickerP]);
 
   return (
     <div className="app-content" style={{ padding: '2.5rem', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
@@ -352,7 +370,7 @@ export const CalendarApp = ({ user }: { user: any }) => {
               onClick={handlePrevMonth} 
               style={{ width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'transparent', border: 'none', color: '#ffffff' }}
             >
-              <ChevronLeft size={20} />
+              <ArrowLeft size={24} strokeWidth={3} />
             </motion.button>
             <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
             <motion.button 
@@ -361,19 +379,19 @@ export const CalendarApp = ({ user }: { user: any }) => {
               onClick={handleNextMonth} 
               style={{ width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'transparent', border: 'none', color: '#ffffff' }}
             >
-              <ChevronRight size={20} />
+              <ArrowRight size={24} strokeWidth={3} />
             </motion.button>
           </div>
         </div>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }} className="hide-scrollbar">
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(7, 1fr)', 
           gap: '1rem', 
-          height: '100%', 
-          gridTemplateRows: 'auto repeat(6, 1fr)',
+          height: 'fit-content', 
+          gridTemplateRows: 'auto',
           perspective: '1000px',
           padding: '2px'
         }}>
@@ -437,7 +455,7 @@ export const CalendarApp = ({ user }: { user: any }) => {
                   flexDirection: 'column', 
                   gap: '8px',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  minHeight: '130px',
+                  minHeight: '110px',
                   overflow: 'hidden'
                 }}
               >
@@ -595,20 +613,20 @@ export const CalendarApp = ({ user }: { user: any }) => {
                       <ScrollWheel 
                         options={Array.from({ length: 12 }, (_, i) => (i + 1).toString())}
                         value={pickerH} isInfinite={true}
-                        onChange={(val) => updateFromPicker(val, pickerM, pickerP)}
+                        onChange={setPickerH}
                         width="70px"
                       />
                       <span style={{ color: 'var(--accent-primary)', fontWeight: 900, fontSize: '2rem', opacity: 0.2 }}>:</span>
                       <ScrollWheel 
                         options={Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'))}
                         value={pickerM} isInfinite={true}
-                        onChange={(val) => updateFromPicker(pickerH, val, pickerP)}
+                        onChange={setPickerM}
                         width="70px"
                       />
                       <ScrollWheel 
                         options={['AM', 'PM']}
                         value={pickerP}
-                        onChange={(val) => updateFromPicker(pickerH, pickerM, val)}
+                        onChange={setPickerP}
                         width="80px"
                       />
                     </div>
@@ -651,7 +669,7 @@ export const CalendarApp = ({ user }: { user: any }) => {
                       letterSpacing: '0.02em'
                     }}
                   >
-                    Confirm Event
+                    {isSaving ? 'Event Saved!' : 'Confirm Event'}
                   </motion.button>
                 </div>
               </div>

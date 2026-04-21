@@ -89,6 +89,9 @@ router.patch("/profile", verifyToken as any, async (req: Request, res: Response)
     if (req.body.musicSyncEnabled !== undefined) {
       updateData['preferences.rgbController.musicSyncEnabled'] = req.body.musicSyncEnabled;
     }
+    if (req.body.calendarEvents !== undefined) {
+      updateData.calendarEvents = req.body.calendarEvents;
+    }
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: "No fields to update" });
