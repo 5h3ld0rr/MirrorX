@@ -6,7 +6,11 @@ import { youtubeService } from '../../services/youtube';
 import { useMusic } from '../../context/MusicContext';
 
 export const MusicApp = () => {
-  const { currentTrack, isPlaying, playTrack, togglePlay, setVolume, toggleMute, volume, skipForward, skipBackward, activeType, progress, duration, setProgress: updateGlobalProgress } = useMusic();
+  const { 
+    currentTrack, isPlaying, playTrack, togglePlay, setVolume, toggleMute, 
+    volume, skipForward, skipBackward, activeType, progress, duration, 
+    seekTo, isShuffle, isLoop, toggleShuffle, toggleLoop 
+  } = useMusic();
   const [activeTab, setActiveTab] = useState('Explore');
   const [songs, setSongs] = useState<YouTubeVideo[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -202,13 +206,20 @@ export const MusicApp = () => {
             {/* Controls */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.8rem', flex: 1, maxWidth: '500px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                <Shuffle size={18} color="rgba(255,255,255,0.3)" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleShuffle(); }}
+                  style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', color: isShuffle ? 'var(--accent-primary)' : 'rgba(255,255,255,0.3)', transition: 'all 0.3s' }}
+                >
+                  <Shuffle size={18} color="currentColor" />
+                </button>
+                
                 <button
                   onClick={(e) => { e.stopPropagation(); skipBackward(); }}
                   style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
                 >
                   <SkipBack size={24} fill="white" color="white" />
                 </button>
+
                 <motion.button
                   whileHover={{ scale: 1.1, boxShadow: '0 0 20px var(--accent-glow)' }}
                   whileTap={{ scale: 0.9 }}
@@ -222,20 +233,29 @@ export const MusicApp = () => {
                     justifyContent: 'center',
                     color: 'var(--accent-primary)',
                     cursor: 'pointer',
+                    background: 'none', 
+                    border: 'none',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px' }}>
-                    {isPlaying ? <Pause size={24} fill="white" color="white" /> : <Play size={24} fill="white" color="white" style={{ marginLeft: '1px' }} />}
+                    {isPlaying ? <Pause size={24} fill="white" color="white" /> : <Play size={24} fill="white" color="white" style={{ marginLeft: '2px' }} />}
                   </div>
                 </motion.button>
+
                 <button
                   onClick={(e) => { e.stopPropagation(); skipForward(); }}
                   style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
                 >
                   <SkipForward size={24} fill="white" color="white" />
                 </button>
-                <Repeat size={18} color="rgba(255,255,255,0.3)" />
+
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleLoop(); }}
+                  style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', color: isLoop ? 'var(--accent-primary)' : 'rgba(255,255,255,0.3)', transition: 'all 0.3s' }}
+                >
+                  <Repeat size={18} color="currentColor" />
+                </button>
               </div>
               {/* Progress Bar */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
@@ -246,7 +266,7 @@ export const MusicApp = () => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const percentage = x / rect.width;
-                    updateGlobalProgress(Math.floor(percentage * duration));
+                    seekTo(Math.floor(percentage * duration));
                   }}
                   style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', position: 'relative', cursor: 'pointer' }}
                 >

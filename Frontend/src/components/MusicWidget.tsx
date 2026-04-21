@@ -4,7 +4,10 @@ import { useMusic } from '../context/MusicContext';
 import { useState } from 'react';
 
 export const MusicWidget = () => {
-  const { currentTrack, isPlaying, togglePlay, skipForward, skipBackward, progress, duration, activeType, volume, setVolume, toggleMute } = useMusic();
+  const { 
+    currentTrack, isPlaying, togglePlay, skipForward, skipBackward, 
+    progress, duration, activeType, volume, setVolume, toggleMute, seekTo 
+  } = useMusic();
   const [showVolume, setShowVolume] = useState(false);
 
   if (!currentTrack || activeType === 'video') return null;
@@ -63,6 +66,16 @@ export const MusicWidget = () => {
             style={{ height: '100%', background: 'var(--accent-primary)', borderRadius: '2px', boxShadow: '0 0 8px var(--accent-glow)' }}
           />
         </div>
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const percentage = x / rect.width;
+            seekTo(Math.floor(percentage * duration));
+          }}
+          style={{ width: '100%', height: '14px', marginTop: '-14px', cursor: 'pointer', zIndex: 5, position: 'relative' }} 
+        />
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
           <span>{formatTime(progress)}</span>
           <span>{duration > 0 ? formatTime(duration) : '--:--'}</span>

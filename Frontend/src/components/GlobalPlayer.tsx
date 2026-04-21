@@ -2,74 +2,133 @@ import { useEffect, useRef, useState } from 'react';
 import { useMusic } from '../context/MusicContext';
 
 export const GlobalPlayer = () => {
-  const { currentTrack, isPlaying, volume, activeType, setProgress, setDuration } = useMusic();
+  const { currentTrack, isPlaying, volume, activeType, progress, duration, setProgress, setDuration, isLoop, skipForward, seekRequest } = useMusic();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
+  const progressRef = useRef(progress);
+  const durationRef = useRef(duration);
+  const loadedRef = useRef(loaded);
+  const trackIdAtLoad = useRef<string | null>(null);
+  const lastProgress = useRef(0);
+  const staleCounter = useRef(0);
 
-  // Send commands to YouTube iframe
+  // Sync refs
   useEffect(() => {
+    progressRef.current = progress;
+    durationRef.current = duration;
+    loadedRef.current = loaded;
+  }, [progress, duration, loaded]);
+
+  // Reset loaded state and metrics when track changes
+  useEffect(() => {
+    setLoaded(false);
+    setProgress(0);
+    setDuration(0);
+  }, [currentTrack?.id]);
+
+  const sendCommand = (func: string, args: any[] = []) => {
     const iframe = iframeRef.current;
     if (iframe && loaded && activeType === 'music') {
-      const command = isPlaying ? 'playVideo' : 'pauseVideo';
       iframe.contentWindow?.postMessage(JSON.stringify({ 
-        event: 'command', 
-        func: command, 
-        args: [] 
+        event: 'command', func, args 
       }), '*');
     }
+  };
+
+  // Play/Pause Control
+  useEffect(() => {
+    sendCommand(isPlaying ? 'playVideo' : 'pauseVideo');
   }, [isPlaying, loaded, activeType]);
 
-  // Handle volume changes
+  // Volume & Track Sync
   useEffect(() => {
-    const iframe = iframeRef.current;
-    if (iframe && loaded && activeType === 'music') {
-      iframe.contentWindow?.postMessage(JSON.stringify({ 
-        event: 'command', 
-        func: 'setVolume', 
-        args: [volume] 
-      }), '*');
+    sendCommand('setVolume', [volume]);
+  }, [volume, loaded, activeType, currentTrack?.id]);
+  
+  // Seek Handler
+  useEffect(() => {
+    if (seekRequest) {
+      sendCommand('seekTo', [seekRequest.time, true]);
     }
-  }, [volume, loaded, activeType]);
+  }, [seekRequest, loaded, activeType]);
 
-  // Sync IFrame Data (Time/Duration)
+  // Main Event Listener & Controller
   useEffect(() => {
     if (!loaded || activeType !== 'music') return;
 
     const handleMessage = (event: MessageEvent) => {
+      if (!loadedRef.current || trackIdAtLoad.current !== currentTrack?.id) return;
+      
       try {
         const data = JSON.parse(event.data);
+        
+        // Time & Duration updates
         if (data.event === 'infoDelivery' && data.info) {
           if (data.info.currentTime !== undefined) setProgress(Math.floor(data.info.currentTime));
           if (data.info.duration !== undefined) setDuration(Math.floor(data.info.duration));
         }
-      } catch (e) {
-        // Not a JSON message or not from YouTube
-      }
+
+        // Initialize state on Ready
+        if (data.event === 'onReady') {
+          sendCommand('setVolume', [volume]);
+        }
+
+        // Playback state transitions
+        if (data.event === 'onStateChange') {
+          const rawState = data.info !== undefined ? data.info : (data.args ? data.args[0] : data.data);
+          const state = typeof rawState === 'object' ? rawState.playbackQuality : rawState; // Handle object wrapper if present
+          
+          // Basic state mapping for standard events
+          const finalState = typeof rawState === 'number' ? rawState : (data.info?.playerState);
+
+          if (finalState === 0 || state === 0) { // ENDED
+            if (isLoop) {
+              sendCommand('seekTo', [0, true]);
+              sendCommand('playVideo');
+            } else {
+              skipForward();
+            }
+          }
+        }
+      } catch (e) { /* Ignore non-JSON or external messages */ }
     };
 
     window.addEventListener('message', handleMessage);
     
-    // Set up polling for time updates
-    const pollInterval = setInterval(() => {
-      const iframe = iframeRef.current;
-      if (iframe && isPlaying) {
-        iframe.contentWindow?.postMessage(JSON.stringify({ event: 'listening' }), '*');
+    // Watchdog for missing ENDED events
+    const watchdog = setInterval(() => {
+      if (isPlaying) {
+        // Heartbeat to keep iFrame communication active
+        iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'listening' }), '*');
+        
+        // Staleness Heartbeat
+        if (progressRef.current === lastProgress.current && isPlaying) {
+          staleCounter.current++;
+        } else {
+          staleCounter.current = 0;
+        }
+        lastProgress.current = progressRef.current;
+
+        const isNearEnd = durationRef.current > 0 && progressRef.current >= durationRef.current - 1;
+        
+        // If we are near end and stuck for 4 seconds, or reached duration + 1
+        if ((isNearEnd && staleCounter.current >= 4) || (durationRef.current > 0 && progressRef.current >= durationRef.current + 1)) {
+          if (!isLoop) skipForward();
+        }
       }
     }, 1000);
 
     return () => {
       window.removeEventListener('message', handleMessage);
-      clearInterval(pollInterval);
+      clearInterval(watchdog);
     };
-  }, [loaded, activeType, isPlaying, setProgress, setDuration]);
+  }, [loaded, activeType, isPlaying, setProgress, setDuration, isLoop, skipForward]);
 
-  // Clean up and guards
-  if (!currentTrack || activeType !== 'music') {
-    return null;
-  }
+  if (!currentTrack || activeType !== 'music') return null;
 
   const handleLoad = () => {
     setLoaded(true);
+    trackIdAtLoad.current = currentTrack?.id;
   };
 
   const origin = window.location.origin;
@@ -81,7 +140,7 @@ export const GlobalPlayer = () => {
         ref={iframeRef}
         id="global-youtube-player"
         onLoad={handleLoad}
-        src={`https://www.youtube.com/embed/${currentTrack.id}?autoplay=1&playlist=${currentTrack.id}&loop=1&enablejsapi=1&origin=${origin}&widget_referrer=${origin}&rel=0&controls=0&modestbranding=1`}
+        src={`https://www.youtube.com/embed/${currentTrack.id}?autoplay=1&enablejsapi=1&origin=${origin}&widget_referrer=${origin}&rel=0&controls=0&modestbranding=1`}
         allow="autoplay; encrypted-media"
         style={{ width: '100%', height: '100%', border: 'none' }}
       />
