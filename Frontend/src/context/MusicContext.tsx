@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { YouTubeVideo } from '../services/youtube';
 
 interface MusicContextType {
@@ -151,9 +151,42 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       toggleShuffle,
       toggleLoop,
     }}>
+      <MusicVoiceController 
+        playTrack={playTrack} 
+        pauseTrack={pauseTrack} 
+        resumeTrack={resumeTrack} 
+      />
       {children}
     </MusicContext.Provider>
   );
+};
+
+const MusicVoiceController = ({ 
+  playTrack, 
+  pauseTrack, 
+  resumeTrack 
+}: { 
+  playTrack: any, 
+  pauseTrack: any, 
+  resumeTrack: any 
+}) => {
+  useEffect(() => {
+    const handlePlay = (e: any) => playTrack(e.detail);
+    const handleStop = () => pauseTrack();
+    const handleResume = () => resumeTrack();
+
+    window.addEventListener('VOICE_PLAY_MUSIC' as any, handlePlay);
+    window.addEventListener('VOICE_STOP_MUSIC' as any, handleStop);
+    window.addEventListener('VOICE_RESUME_MUSIC' as any, handleResume);
+
+    return () => {
+      window.removeEventListener('VOICE_PLAY_MUSIC' as any, handlePlay);
+      window.removeEventListener('VOICE_STOP_MUSIC' as any, handleStop);
+      window.removeEventListener('VOICE_RESUME_MUSIC' as any, handleResume);
+    };
+  }, [playTrack, pauseTrack, resumeTrack]);
+
+  return null;
 };
 
 export const useMusic = () => {

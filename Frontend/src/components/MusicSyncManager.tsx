@@ -135,7 +135,6 @@ export const MusicSyncManager = ({ bleConnected, bleCharacteristic, user }: Musi
             const g = user?.rgbColor?.g ?? 0;
             const b = user?.rgbColor?.b ?? 255;
             const bright = (user?.brightness ?? 100) / 100;
-            console.log(intensity);
 
             if (intensity > 20) {
               const scale = (intensity / 255) * bright;
