@@ -3,7 +3,6 @@ import authRoutes from "./auth.routes.js";
 import userRoutes from "./user.routes.js";
 import alarmRoutes from "./alarms.routes.js";
 import noteRoutes from "./notes.routes.js";
-import spotifyRoutes from "./spotify.routes.js";
 import googleRoutes from "./google.routes.js";
 
 const router = Router();

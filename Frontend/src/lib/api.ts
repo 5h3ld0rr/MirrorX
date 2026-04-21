@@ -152,6 +152,10 @@ export const createNote = async (data: any) => {
     },
     body: JSON.stringify(data)
   });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to create note');
+  }
   return await response.json();
 };
 
@@ -167,6 +171,10 @@ export const updateNote = async (id: string, data: any) => {
     },
     body: JSON.stringify(data)
   });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update note');
+  }
   return await response.json();
 };
 
