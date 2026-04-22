@@ -3,6 +3,7 @@ export const CONFIG = {
   STANDBY_DELAY: 15000, // 15 seconds of total inactivity (Stage 1: Sleep)
   TERMINATION_DELAY: 30000, 
   DEFAULT_APP_BRIGHTNESS: 100, // 100% brightness by default
+  DEFAULT_AUTO_BRIGHTNESS: false,
 
   // Face Authentication
   FACE_SCAN_INTERVAL: 5000,

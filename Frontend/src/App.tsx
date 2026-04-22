@@ -32,6 +32,7 @@ import { ReminderWidget } from './components/ReminderWidget';
 import { NewsWidget } from './components/NewsWidget';
 import { VoiceAssistant } from './components/VoiceAssistant';
 import { VirtualKeyboard } from './components/VirtualKeyboard';
+import { BrightnessManager } from './components/BrightnessManager';
 
 interface UserProfile {
   uid: string;
@@ -45,6 +46,7 @@ interface UserProfile {
   brightness?: number;
   appBrightness?: number;
   musicSyncEnabled?: boolean;
+  autoBrightnessEnabled?: boolean;
   widgetSettings?: {
     [key: string]: { enabled: boolean; location: string };
   };
@@ -216,6 +218,12 @@ function App() {
     if (isNewLogin) {
       setShowWelcome(true);
       autoConnectBLE(userData);
+    }
+    // Sync auto-brightness state with backend sensor
+    if (userData.autoBrightnessEnabled) {
+      import('./services/socket').then(({ socketService }) => {
+        socketService.emit('brightness:toggle', true);
+      });
     }
   };
 
@@ -719,15 +727,10 @@ function App() {
         />
         <VirtualKeyboard />
       </motion.div>
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'black',
-        opacity: 1 - (user?.appBrightness ?? CONFIG.DEFAULT_APP_BRIGHTNESS) / 100,
-        pointerEvents: 'none',
-        zIndex: 10000,
-        transition: 'opacity 0.3s ease'
-      }} />
+      <BrightnessManager 
+        autoEnabled={!!user?.autoBrightnessEnabled} 
+        manualBrightness={user?.appBrightness ?? CONFIG.DEFAULT_APP_BRIGHTNESS}
+      />
     </>
   );
 }
