@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import routes from "./routes/index.js";
 import { brightnessService } from "./services/BrightnessService.js";
+import { motionService } from "./services/MotionService.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -39,9 +40,10 @@ io.on("connection", (socket) => {
 
 // Initialize Services
 brightnessService.setIo(io);
+motionService.setIo(io);
 
 httpServer.listen(port, () => {
-  console.log(`🚀 MirrorX Backend running on port ${port} (Socket.io enabled)`);
+  console.log(`🚀 MirrorX Backend running on port ${port} (Socket.io/Hardware enabled)`);
 });
 
 export default app;

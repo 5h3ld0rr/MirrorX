@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap, Moon, Timer, MessageSquare, Cpu, FileText, X, Send, Bot, Music, Sparkles } from 'lucide-react';
+import { User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap, Moon, Timer, MessageSquare, Cpu, FileText, X, Send, Bot, Music, Sparkles, Scan } from 'lucide-react';
 import { socketService } from '../../services/socket';
 import { updateProfile, updateProfilePicture } from '../../lib/api';
 import { CONFIG } from '../../config';
@@ -91,6 +91,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
   const [ledPower, setLedPower] = useState(true);
   const [musicSyncEnabled, setMusicSyncEnabled] = useState(user.musicSyncEnabled || false);
   const [autoBrightnessEnabled, setAutoBrightnessEnabled] = useState(user.autoBrightnessEnabled || false);
+  const [motionWakeEnabled, setMotionWakeEnabled] = useState(user.motionWakeEnabled || false);
   const [rgbHue, setRgbHue] = useState(0);
   const [rgbSat] = useState(100);
   const [standByDelay, setStandByDelay] = useState(user.standByDelay || CONFIG.STANDBY_DELAY);
@@ -118,6 +119,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
       setStandByDelay(user.standByDelay || CONFIG.STANDBY_DELAY);
       setTerminationDelay(user.terminationDelay || CONFIG.TERMINATION_DELAY);
       setAutoBrightnessEnabled(user.autoBrightnessEnabled || false);
+      setMotionWakeEnabled(user.motionWakeEnabled || false);
       if (user.widgetSettings) setWidgetSettings(user.widgetSettings);
       
       if (user.rgbColor) {
@@ -247,6 +249,18 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
         socketService.emit('brightness:toggle', enabled);
       } catch (err) {
         console.error('Failed to save auto brightness:', err);
+      }
+    }, 800);
+  }, [onUpdateUser]);
+
+  const saveMotionWakeToCloud = useCallback((enabled: boolean) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await updateProfile({ motionWakeEnabled: enabled });
+        onUpdateUser({ motionWakeEnabled: enabled });
+      } catch (err) {
+        console.error('Failed to save motion wake settings:', err);
       }
     }, 800);
   }, [onUpdateUser]);
@@ -747,11 +761,12 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
                     }} />
                   </div>
                 </div>
-             </div>
-          </div>
+              </div>
+           </div>
         );
       case 'Security': {
         const standbyOptions = [
+          { label: 'Auto (Smart)', value: 0 },
           { label: '5 seconds', value: 5000 },
           { label: '15 seconds', value: 15000 },
           { label: '30 seconds', value: 30000 },
@@ -837,9 +852,65 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
              <div className="glass-panel" style={{ padding: '2rem', borderRadius: '24px' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem', paddingLeft: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Screen & Sleep</h3>
                 
+                <div 
+                  onClick={() => {
+                    const newVal = !motionWakeEnabled;
+                    setMotionWakeEnabled(newVal);
+                    saveMotionWakeToCloud(newVal);
+                  }}
+                  style={{ 
+                    marginBottom: '1rem',
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '1.25rem 1.5rem', 
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    cursor: 'pointer' 
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <div style={{ 
+                      width: '40px', 
+                      height: '40px', 
+                      borderRadius: '10px', 
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Scan size={20} color={motionWakeEnabled ? 'var(--accent-primary)' : 'var(--text-muted)'} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>Automatic Wake Up</h4>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Wakes screen automatically</p>
+                    </div>
+                  </div>
+                  <div style={{ 
+                    width: '50px', 
+                    height: '26px', 
+                    background: motionWakeEnabled ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', 
+                    borderRadius: '20px', 
+                    position: 'relative',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    <div style={{ 
+                      position: 'absolute', 
+                      left: motionWakeEnabled ? '27px' : '3px', 
+                      top: '3px', 
+                      width: '20px', 
+                      height: '20px', 
+                      background: motionWakeEnabled ? 'black' : 'white', 
+                      borderRadius: '50%',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }} />
+                  </div>
+                </div>
+
                 <SettingRow 
                   title="Turn my screen off after"
-                  subtitle="Dims the display to save energy when no motion is detected"
+                  subtitle="Turns off the display to save energy"
                   icon={Moon}
                   value={standByDelay}
                   options={standbyOptions}

@@ -14,7 +14,7 @@ export const BrightnessManager = ({ autoEnabled, manualBrightness }: { autoEnabl
     socketService.on('brightness:update', handleUpdate);
 
     return () => {
-      socketService.off('brightness:update');
+      socketService.off('brightness:update', handleUpdate);
     };
   }, [autoEnabled]);
 

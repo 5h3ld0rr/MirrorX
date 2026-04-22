@@ -47,10 +47,12 @@ interface UserProfile {
   appBrightness?: number;
   musicSyncEnabled?: boolean;
   autoBrightnessEnabled?: boolean;
+  motionWakeEnabled?: boolean;
   widgetSettings?: {
     [key: string]: { enabled: boolean; location: string };
   };
 }
+import { MotionManager } from './components/MotionManager';
 
 function App() {
   const [user, setUser] = useState<UserProfile | null>();
@@ -380,7 +382,7 @@ function App() {
 
       if (isAuthModalOpen || showWelcome || isInhibitingSleep) return;
 
-      const standbyVal = user?.standByDelay || CONFIG.STANDBY_DELAY;
+      const standbyVal = user?.standByDelay === 0 ? CONFIG.STANDBY_DELAY : (user?.standByDelay || CONFIG.STANDBY_DELAY);
       const logoutVal = user?.terminationDelay || CONFIG.TERMINATION_DELAY;
 
       if (hasInteracted) {
@@ -730,6 +732,15 @@ function App() {
       <BrightnessManager 
         autoEnabled={!!user?.autoBrightnessEnabled} 
         manualBrightness={user?.appBrightness ?? CONFIG.DEFAULT_APP_BRIGHTNESS}
+      />
+      <MotionManager 
+        enabled={!!user?.motionWakeEnabled}
+        onMotionDetected={() => {
+          if (!hasInteracted) {
+            setHasInteracted(true);
+            console.log("🌊 Motion detected - Waking up MirrorX");
+          }
+        }}
       />
     </>
   );

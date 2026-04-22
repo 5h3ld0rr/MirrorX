@@ -32,9 +32,9 @@ class SocketService {
     this.getSocket().on(event, callback);
   }
 
-  public off(event: string) {
+  public off(event: string, callback?: (data: any) => void) {
     if (this.socket) {
-      this.socket.off(event);
+      this.socket.off(event, callback);
     }
   }
 }
