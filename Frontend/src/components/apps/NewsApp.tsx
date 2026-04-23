@@ -274,7 +274,7 @@ export const NewsApp = () => {
   }
 
   return (
-    <div className="app-content" style={{ padding: '2rem 4rem', height: '100%', overflowY: 'auto' }}>
+    <div className="app-content" style={{ padding: '2rem 4rem', height: '100%', overflowY: 'auto', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '3rem', flexWrap: 'wrap' }}>
         {availableCategories.map((cat) => (
             <button

@@ -123,7 +123,7 @@ export const MusicApp = () => {
       {/* Main Content Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
         {/* Scrollable Songs List */}
-        <div style={{ flex: 1, padding: '2rem', overflowY: 'auto', position: 'relative' }}>
+        <div style={{ flex: 1, padding: '2rem', overflowY: 'auto', position: 'relative', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
             <h3 style={{ fontSize: '1.5rem', fontWeight: 600 }}>{searchQuery ? `Results for "${searchQuery}"` : 'Recommended'}</h3>
           </div>

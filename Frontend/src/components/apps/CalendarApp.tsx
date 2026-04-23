@@ -434,7 +434,7 @@ export const CalendarApp = ({ user }: { user: any }) => {
         </div>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }} className="hide-scrollbar">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }} className="hide-scrollbar">
         {viewMode === 'month' && (
           <>
             <div style={{ 
@@ -688,7 +688,7 @@ export const CalendarApp = ({ user }: { user: any }) => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }} className="hide-scrollbar">
+                <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }} className="hide-scrollbar">
                   {(userEvents[selectedDate!] || []).length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.3, border: '2px dashed rgba(255,255,255,0.1)', borderRadius: '24px' }}>No events</div>
                   ) : (

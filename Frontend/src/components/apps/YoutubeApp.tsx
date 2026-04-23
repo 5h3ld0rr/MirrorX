@@ -317,7 +317,7 @@ export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: bool
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Main Content */}
-        <div style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto' }}>
+        <div style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
           {selectedVideo ? (
             <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
                 <div 
@@ -693,7 +693,7 @@ export const YoutubeApp = ({ onInhibitSleep }: { onInhibitSleep?: (inhibit: bool
         </div>
         {/* Sidebar / Recommended (when video is selected) */}
         {selectedVideo && (
-            <div style={{ width: '400px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '2rem', overflowY: 'auto' }}>
+            <div style={{ width: '400px', borderLeft: '1px solid rgba(255,255,255,0.05)', padding: '2rem', overflowY: 'auto', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <h3 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Up Next</h3>
                     <button onClick={() => stopAll()} className="glass-panel" style={{ padding: '0.4rem' }}><X size={18} /></button>

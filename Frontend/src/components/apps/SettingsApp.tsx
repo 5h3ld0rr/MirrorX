@@ -1743,7 +1743,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
       </div>
 
       {/* Content Area */}
-      <div style={{ flex: 1, padding: '4rem 6rem', overflowY: 'auto' }}>
+      <div style={{ flex: 1, padding: '4rem 6rem', overflowY: 'auto', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
         <input 
           type="file" 
           ref={fileInputRef} 
@@ -1791,7 +1791,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
               </div>
            </div>
            
-           <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(0,0,0,0.2)' }}>
+           <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(0,0,0,0.2)', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
               {chatHistory.map((chat: any, idx: any) => (
                 <div key={idx} style={{ 
                   alignSelf: chat.role === 'user' ? 'flex-end' : 'flex-start',

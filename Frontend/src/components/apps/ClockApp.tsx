@@ -307,7 +307,7 @@ export const ClockApp = () => {
       </div>
 
       {/* App Content */}
-      <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+      <div style={{ flex: 1, overflow: 'auto', position: 'relative', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
         <AnimatePresence mode="wait">
           {activeTab === 'clock' && (
             <motion.div
@@ -595,7 +595,7 @@ export const ClockApp = () => {
                 />
               </div>
 
-              <div style={{ maxHeight: '300px', overflow: 'auto', marginTop: '1rem' }}>
+              <div style={{ maxHeight: '300px', overflow: 'auto', marginTop: '1rem', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
                 {filteredCities.length > 0 ? (
                   filteredCities.map(city => (
                     <div 

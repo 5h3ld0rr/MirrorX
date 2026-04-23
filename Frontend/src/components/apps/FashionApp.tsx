@@ -222,7 +222,7 @@ export const FashionApp = () => {
       </div>
 
       {/* Main Content */}
-      <div style={{ flex: 1, padding: '3rem 4rem', overflowY: 'auto', position: 'relative' }}>
+      <div style={{ flex: 1, padding: '3rem 4rem', overflowY: 'auto', position: 'relative', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
         {/* Header Navigation */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4rem' }}>
           <div style={{ position: 'relative', width: '400px' }}>
