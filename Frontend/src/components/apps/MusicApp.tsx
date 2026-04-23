@@ -4,6 +4,7 @@ import { Music, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Search, Vol
 import type { YouTubeVideo } from '../../services/youtube';
 import { youtubeService } from '../../services/youtube';
 import { useMusic } from '../../context/MusicContext';
+import { getPlaylists, createPlaylist as apiCreatePlaylist, updatePlaylist as apiUpdatePlaylist, deletePlaylist as apiDeletePlaylist } from '../../lib/api';
 
 interface Playlist {
   id: string;
@@ -29,61 +30,79 @@ export const MusicApp = () => {
 
   useEffect(() => {
     loadTrending();
-    const savedPlaylists = localStorage.getItem('music_playlists');
-    if (savedPlaylists) {
-      setPlaylists(JSON.parse(savedPlaylists));
-    }
+    fetchPlaylists();
   }, []);
 
-  const savePlaylists = (newPlaylists: Playlist[]) => {
-    setPlaylists(newPlaylists);
-    localStorage.setItem('music_playlists', JSON.stringify(newPlaylists));
-  };
-
-  const createPlaylist = () => {
-    const name = prompt('Enter playlist name:');
-    if (!name) return;
-    const newPlaylist: Playlist = {
-      id: Date.now().toString(),
-      name,
-      tracks: []
-    };
-    savePlaylists([...playlists, newPlaylist]);
-  };
-
-  const deletePlaylist = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this playlist?')) return;
-    const newPlaylists = playlists.filter(p => p.id !== id);
-    savePlaylists(newPlaylists);
-    if (activePlaylistId === id) {
-      setActivePlaylistId(null);
-      setActiveTab('Explore');
+  const fetchPlaylists = async () => {
+    try {
+      const data = await getPlaylists();
+      setPlaylists(data);
+    } catch (error) {
+      console.error('Failed to fetch playlists:', error);
+      // Fallback to local storage if API fails or user not logged in
+      const saved = localStorage.getItem('music_playlists');
+      if (saved) setPlaylists(JSON.parse(saved));
     }
   };
 
-  const addToPlaylist = (playlistId: string, track: YouTubeVideo) => {
-    const newPlaylists = playlists.map(p => {
-      if (p.id === playlistId) {
-        if (p.tracks.find(t => t.id === track.id)) return p;
-        return { ...p, tracks: [...p.tracks, track] };
-      }
-      return p;
-    });
-    savePlaylists(newPlaylists);
-    setShowAddMenu(null);
+  const createPlaylist = async () => {
+    const name = prompt('Enter playlist name:');
+    if (!name) return;
+    try {
+      const newPlaylist = await apiCreatePlaylist({ name, tracks: [] });
+      setPlaylists([...playlists, newPlaylist]);
+    } catch (error) {
+      console.error('Failed to create playlist:', error);
+    }
   };
 
-  const removeFromPlaylist = (playlistId: string, trackId: string) => {
-    const newPlaylists = playlists.map(p => {
-      if (p.id === playlistId) {
-        const updatedTracks = p.tracks.filter(t => t.id !== trackId);
-        if (activePlaylistId === playlistId) setSongs(updatedTracks);
-        return { ...p, tracks: updatedTracks };
+  const deletePlaylist = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this playlist?')) return;
+    try {
+      await apiDeletePlaylist(id);
+      const newPlaylists = playlists.filter(p => p.id !== id);
+      setPlaylists(newPlaylists);
+      if (activePlaylistId === id) {
+        setActivePlaylistId(null);
+        setActiveTab('Explore');
       }
-      return p;
-    });
-    savePlaylists(newPlaylists);
+    } catch (error) {
+      console.error('Failed to delete playlist:', error);
+    }
+  };
+
+  const addToPlaylist = async (playlistId: string, track: YouTubeVideo) => {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (!playlist) return;
+    
+    if (playlist.tracks.find(t => t.id === track.id)) {
+      setShowAddMenu(null);
+      return;
+    }
+
+    const updatedTracks = [...playlist.tracks, track];
+    try {
+      await apiUpdatePlaylist(playlistId, { tracks: updatedTracks });
+      setPlaylists(playlists.map(p => p.id === playlistId ? { ...p, tracks: updatedTracks } : p));
+      setShowAddMenu(null);
+    } catch (error) {
+      console.error('Failed to add to playlist:', error);
+    }
+  };
+
+  const removeFromPlaylist = async (playlistId: string, trackId: string) => {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (!playlist) return;
+
+    const updatedTracks = playlist.tracks.filter(t => t.id !== trackId);
+    try {
+      await apiUpdatePlaylist(playlistId, { tracks: updatedTracks });
+      setPlaylists(playlists.map(p => p.id === playlistId ? { ...p, tracks: updatedTracks } : p));
+      if (activePlaylistId === playlistId) setSongs(updatedTracks);
+    } catch (error) {
+      console.error('Failed to remove from playlist:', error);
+    }
   };
 
   const loadTrending = async () => {

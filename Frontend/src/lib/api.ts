@@ -190,3 +190,68 @@ export const deleteNote = async (id: string) => {
   });
   return await response.json();
 };
+
+// Playlists API
+export const getPlaylists = async () => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/playlists`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!response.ok) throw new Error('Failed to fetch playlists');
+  return await response.json();
+};
+
+export const createPlaylist = async (data: { name: string, tracks?: any[] }) => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/playlists`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to create playlist');
+  }
+  return await response.json();
+};
+
+export const updatePlaylist = async (id: string, data: { name?: string, tracks?: any[] }) => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/playlists/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update playlist');
+  }
+  return await response.json();
+};
+
+export const deletePlaylist = async (id: string) => {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("No authenticated user");
+
+  const response = await fetch(`${API_BASE_URL}/playlists/${id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to delete playlist');
+  }
+  return await response.json();
+};
