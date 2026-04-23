@@ -1,20 +1,90 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Music, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Search, Volume2, Plus } from 'lucide-react';
+import { Music, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Search, Volume2, Plus, ListMusic, Trash2 } from 'lucide-react';
 import type { YouTubeVideo } from '../../services/youtube';
 import { youtubeService } from '../../services/youtube';
 import { useMusic } from '../../context/MusicContext';
 
+interface Playlist {
+  id: string;
+  name: string;
+  tracks: YouTubeVideo[];
+}
+
 export const MusicApp = () => {
-  const { currentTrack, isPlaying, playTrack, togglePlay, setVolume, volume, skipForward, skipBackward, activeType, progress, duration, setProgress: updateGlobalProgress } = useMusic();
+  const { 
+    currentTrack, isPlaying, playTrack, togglePlay, 
+    setVolume, volume, skipForward, skipBackward, 
+    activeType, progress, duration, seekTo,
+    isShuffle, isLoop, toggleShuffle, toggleLoop,
+    toggleMute
+  } = useMusic();
   const [activeTab, setActiveTab] = useState('Explore');
   const [songs, setSongs] = useState<YouTubeVideo[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
+  const [showAddMenu, setShowAddMenu] = useState<string | null>(null);
 
   useEffect(() => {
     loadTrending();
+    const savedPlaylists = localStorage.getItem('music_playlists');
+    if (savedPlaylists) {
+      setPlaylists(JSON.parse(savedPlaylists));
+    }
   }, []);
+
+  const savePlaylists = (newPlaylists: Playlist[]) => {
+    setPlaylists(newPlaylists);
+    localStorage.setItem('music_playlists', JSON.stringify(newPlaylists));
+  };
+
+  const createPlaylist = () => {
+    const name = prompt('Enter playlist name:');
+    if (!name) return;
+    const newPlaylist: Playlist = {
+      id: Date.now().toString(),
+      name,
+      tracks: []
+    };
+    savePlaylists([...playlists, newPlaylist]);
+  };
+
+  const deletePlaylist = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this playlist?')) return;
+    const newPlaylists = playlists.filter(p => p.id !== id);
+    savePlaylists(newPlaylists);
+    if (activePlaylistId === id) {
+      setActivePlaylistId(null);
+      setActiveTab('Explore');
+    }
+  };
+
+  const addToPlaylist = (playlistId: string, track: YouTubeVideo) => {
+    const newPlaylists = playlists.map(p => {
+      if (p.id === playlistId) {
+        if (p.tracks.find(t => t.id === track.id)) return p;
+        return { ...p, tracks: [...p.tracks, track] };
+      }
+      return p;
+    });
+    savePlaylists(newPlaylists);
+    setShowAddMenu(null);
+  };
+
+  const removeFromPlaylist = (playlistId: string, trackId: string) => {
+    const newPlaylists = playlists.map(p => {
+      if (p.id === playlistId) {
+        const updatedTracks = p.tracks.filter(t => t.id !== trackId);
+        if (activePlaylistId === playlistId) setSongs(updatedTracks);
+        return { ...p, tracks: updatedTracks };
+      }
+      return p;
+    });
+    savePlaylists(newPlaylists);
+  };
 
   const loadTrending = async () => {
     setLoading(true);
@@ -60,12 +130,14 @@ export const MusicApp = () => {
           {[
             { id: 'Explore', icon: Search, label: 'Explore' },
             { id: 'Moods', icon: Music, label: 'Moods & Genres' },
-            { id: 'Library', icon: Volume2, label: 'Library' }
+            { id: 'Library', icon: Volume2, label: 'Library' },
+            { id: 'Playlists', icon: ListMusic, label: 'My Playlists' }
           ].map((item) => (
             <button
               key={item.id}
               onClick={() => {
                 setActiveTab(item.id);
+                setActivePlaylistId(null);
                 if (item.id === 'Explore') {
                   setSearchQuery('');
                   loadTrending();
@@ -89,6 +161,58 @@ export const MusicApp = () => {
           ))}
         </div>
 
+        {activeTab === 'Playlists' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
+            {playlists.map(playlist => (
+              <div 
+                key={playlist.id} 
+                style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
+                onMouseEnter={(e) => (e.currentTarget.lastChild as HTMLElement).style.opacity = '1'}
+                onMouseLeave={(e) => (e.currentTarget.lastChild as HTMLElement).style.opacity = '0'}
+              >
+                <button
+                  onClick={() => {
+                    setActivePlaylistId(playlist.id);
+                    setSongs(playlist.tracks);
+                  }}
+                  className="glass-panel"
+                  style={{
+                    padding: '0.6rem 0.8rem',
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.8rem',
+                    background: activePlaylistId === playlist.id ? 'rgba(255,255,255,0.1)' : 'transparent',
+                    color: 'white',
+                    cursor: 'pointer',
+                    border: 'none',
+                    textAlign: 'left',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  <ListMusic size={14} /> {playlist.name}
+                </button>
+                <button
+                  onClick={(e) => deletePlaylist(e, playlist.id)}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#ff4444',
+                    cursor: 'pointer',
+                    opacity: 0,
+                    transition: 'opacity 0.2s',
+                    padding: '4px'
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {activeTab === 'Moods' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '-1rem' }}>
             {['Focus', 'Relax', 'Workout', 'Party', 'Energy', 'Jazz'].map(mood => (
@@ -110,7 +234,11 @@ export const MusicApp = () => {
         )}
 
         <div style={{ marginTop: 'auto' }}>
-          <button className="glass-panel" style={{ width: '100%', padding: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer', border: 'none', background: 'rgba(255,255,255,0.05)' }}>
+          <button 
+            onClick={createPlaylist}
+            className="glass-panel" 
+            style={{ width: '100%', padding: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer', border: 'none', background: 'rgba(255,255,255,0.05)' }}
+          >
             <Plus size={18} /> New Playlist
           </button>
         </div>
@@ -121,14 +249,16 @@ export const MusicApp = () => {
         {/* Scrollable Songs List */}
         <div style={{ flex: 1, padding: '2rem', overflowY: 'auto', position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 600 }}>{searchQuery ? `Results for "${searchQuery}"` : 'Recommended'}</h3>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 600 }}>
+              {activePlaylistId ? playlists.find(p => p.id === activePlaylistId)?.name : (searchQuery ? `Results for "${searchQuery}"` : 'Recommended')}
+            </h3>
           </div>
 
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
               <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} style={{ width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%' }} />
             </div>
-          ) : (
+          ) : songs.length > 0 ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '2rem', paddingBottom: '2rem' }}>
               {songs.map((song) => (
                 <motion.div
@@ -140,7 +270,8 @@ export const MusicApp = () => {
                     padding: '1rem',
                     background: currentTrack?.id === song.id ? 'var(--accent-glow)' : 'rgba(255,255,255,0.03)',
                     cursor: 'pointer',
-                    border: currentTrack?.id === song.id ? '1px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.1)'
+                    border: currentTrack?.id === song.id ? '1px solid var(--accent-primary)' : '1px solid rgba(255,255,255,0.1)',
+                    position: 'relative'
                   }}
                 >
                   <div style={{
@@ -159,13 +290,144 @@ export const MusicApp = () => {
                       </div>
                     )}
                   </div>
-                  <h4
-                    style={{ fontSize: '1rem', fontWeight: 600, color: 'white', marginBottom: '0.3rem', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                    dangerouslySetInnerHTML={{ __html: song.title }}
-                  />
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{song.channelTitle}</p>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <h4
+                        style={{ fontSize: '1rem', fontWeight: 600, color: 'white', marginBottom: '0.3rem', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                        dangerouslySetInnerHTML={{ __html: song.title }}
+                      />
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{song.channelTitle}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {activePlaylistId && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFromPlaylist(activePlaylistId, song.id);
+                          }}
+                          style={{ background: 'none', border: 'none', color: 'rgba(255,68,68,0.5)', cursor: 'pointer', padding: '4px' }}
+                          title="Remove from playlist"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowAddMenu(showAddMenu === song.id ? null : song.id);
+                        }}
+                        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: '4px' }}
+                        title="Add to playlist"
+                      >
+                        <Plus size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {showAddMenu === song.id && (
+                    <div 
+                      className="glass-panel"
+                      style={{ 
+                        position: 'absolute', 
+                        bottom: '100%', 
+                        right: '0', 
+                        zIndex: 10, 
+                        width: '200px', 
+                        background: 'rgba(15, 15, 15, 0.95)',
+                        backdropFilter: 'blur(20px)',
+                        padding: '0.5rem',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.2rem'
+                      }}
+                    >
+                      <div style={{ fontSize: '0.7rem', padding: '0.4rem', color: 'rgba(255,255,255,0.5)', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '0.2rem' }}>ADD TO PLAYLIST</div>
+                      {playlists.length === 0 && (
+                        <div style={{ fontSize: '0.8rem', padding: '0.5rem', color: 'rgba(255,255,255,0.3)' }}>No playlists found</div>
+                      )}
+                      {playlists.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToPlaylist(p.id, song);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'white',
+                            textAlign: 'left',
+                            padding: '0.6rem',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            borderRadius: '4px'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          createPlaylist();
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--accent-primary)',
+                          textAlign: 'left',
+                          padding: '0.6rem',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          borderTop: '1px solid rgba(255,255,255,0.1)',
+                          marginTop: '0.2rem'
+                        }}
+                      >
+                        <Plus size={14} /> New Playlist
+                      </button>
+                    </div>
+                  )}
                 </motion.div>
               ))}
+            </div>
+          ) : activePlaylistId ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', gap: '1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Music size={40} style={{ opacity: 0.3 }} />
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <h4 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>This playlist is empty</h4>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Start adding your favorite tracks!</p>
+              </div>
+              <button 
+                onClick={() => { setActiveTab('Explore'); setActivePlaylistId(null); loadTrending(); }}
+                className="glass-panel"
+                style={{ 
+                  padding: '1rem 2rem', 
+                  background: 'var(--accent-primary)', 
+                  color: 'black', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  borderRadius: '12px', 
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.8rem'
+                }}
+              >
+                <Search size={18} /> Browse Songs
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem', opacity: 0.5 }}>
+              <p>No songs found</p>
             </div>
           )}
         </div>
@@ -195,14 +457,113 @@ export const MusicApp = () => {
                   style={{ fontSize: '1rem', fontWeight: 600, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                   dangerouslySetInnerHTML={{ __html: currentTrack.title }}
                 />
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{currentTrack.channelTitle}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{currentTrack.channelTitle}</div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAddMenu(showAddMenu === 'current' ? null : 'current');
+                    }}
+                    style={{ 
+                      background: 'rgba(255,255,255,0.05)', 
+                      border: 'none', 
+                      color: 'rgba(255,255,255,0.7)', 
+                      cursor: 'pointer', 
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.7rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem'
+                    }}
+                  >
+                    <Plus size={12} /> Add to Playlist
+                  </button>
+                </div>
               </div>
+
+              {showAddMenu === 'current' && (
+                <div 
+                  className="glass-panel"
+                  style={{ 
+                    position: 'absolute', 
+                    bottom: '100%', 
+                    left: '80px', 
+                    zIndex: 200, 
+                    width: '200px', 
+                    background: 'rgba(15, 15, 15, 0.98)',
+                    backdropFilter: 'blur(20px)',
+                    padding: '0.5rem',
+                    boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.2rem',
+                    marginBottom: '1rem',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                  }}
+                >
+                  <div style={{ fontSize: '0.7rem', padding: '0.4rem', color: 'rgba(255,255,255,0.5)', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '0.2rem' }}>ADD TO PLAYLIST</div>
+                  {playlists.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToPlaylist(p.id, currentTrack);
+                        setShowAddMenu(null);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'white',
+                        textAlign: 'left',
+                        padding: '0.6rem',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        borderRadius: '4px'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      createPlaylist();
+                      setShowAddMenu(null);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent-primary)',
+                      textAlign: 'left',
+                      padding: '0.6rem',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      borderTop: '1px solid rgba(255,255,255,0.1)',
+                      marginTop: '0.2rem'
+                    }}
+                  >
+                    <Plus size={14} /> New Playlist
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Controls */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.8rem', flex: 1, maxWidth: '500px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                <Shuffle size={18} color="rgba(255,255,255,0.3)" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleShuffle(); }}
+                  style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: isShuffle ? 'var(--accent-primary)' : 'rgba(255,255,255,0.3)' }}
+                >
+                  <Shuffle size={18} />
+                </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); skipBackward(); }}
                   style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
@@ -235,7 +596,12 @@ export const MusicApp = () => {
                 >
                   <SkipForward size={24} fill="white" color="white" />
                 </button>
-                <Repeat size={18} color="rgba(255,255,255,0.3)" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleLoop(); }}
+                  style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: isLoop ? 'var(--accent-primary)' : 'rgba(255,255,255,0.3)' }}
+                >
+                  <Repeat size={18} />
+                </button>
               </div>
               {/* Progress Bar */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
@@ -245,8 +611,8 @@ export const MusicApp = () => {
                     e.stopPropagation();
                     const rect = e.currentTarget.getBoundingClientRect();
                     const x = e.clientX - rect.left;
-                    const percentage = x / rect.width;
-                    updateGlobalProgress(Math.floor(percentage * duration));
+                    const percentage = Math.max(0, Math.min(1, x / rect.width));
+                    seekTo(Math.floor(percentage * duration));
                   }}
                   style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', position: 'relative', cursor: 'pointer' }}
                 >
@@ -261,7 +627,12 @@ export const MusicApp = () => {
 
             {/* Volume */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', justifyContent: 'flex-end', width: '30%' }}>
-              <Volume2 size={20} color="rgba(255,255,255,0.5)" />
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+              >
+                <Volume2 size={20} color={volume === 0 ? '#ff4444' : 'rgba(255,255,255,0.5)'} />
+              </button>
               <input
                 type="range"
                 min="0"

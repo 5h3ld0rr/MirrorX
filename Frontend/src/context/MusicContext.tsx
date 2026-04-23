@@ -19,10 +19,17 @@ interface MusicContextType {
   resumeTrack: () => void;
   togglePlay: () => void;
   setVolume: (volume: number) => void;
+  toggleMute: () => void;
+  seekTo: (seconds: number) => void;
+  seekRequest: { time: number; ts: number } | null;
   setProgress: (seconds: number) => void;
   skipForward: () => void;
   skipBackward: () => void;
   addToQueue: (track: YouTubeVideo) => void;
+  isShuffle: boolean;
+  isLoop: boolean;
+  toggleShuffle: () => void;
+  toggleLoop: () => void;
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
@@ -36,19 +43,11 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activeType, setActiveType] = useState<'music' | 'video' | null>(null);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [seekRequest, setSeekRequest] = useState<{ time: number; ts: number } | null>(null);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [isLoop, setIsLoop] = useState(false);
 
-  // Sync Timer
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        if (progress < duration && duration > 0) {
-          setProgress(prev => prev + 1);
-        }
-      }, 1000);
-    }
-    return () => clearInterval(interval!);
-  }, [isPlaying, progress, duration]);
+  // Methods
 
   const playTrack = useCallback((track: YouTubeVideo, newQueue?: YouTubeVideo[]) => {
     setActiveVideo(null);
@@ -58,6 +57,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveType('music');
     setProgress(0);
     setDuration(0);
+    setSeekRequest(null);
   }, []);
 
   const playVideo = useCallback((video: YouTubeVideo) => {
@@ -67,6 +67,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveType('video');
     setProgress(0);
     setDuration(0);
+    setSeekRequest(null);
   }, []);
 
   const stopAll = useCallback(() => {
@@ -84,11 +85,18 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const skipForward = useCallback(() => {
     if (queue.length === 0) return;
-    const currentIndex = queue.findIndex(t => t.id === currentTrack?.id);
-    if (currentIndex !== -1 && currentIndex < queue.length - 1) {
+    const currentIndex = queue.findIndex(t => t.id === (currentTrack?.id || activeVideo?.id));
+    
+    if (isShuffle) {
+      const randomIndex = Math.floor(Math.random() * queue.length);
+      playTrack(queue[randomIndex]);
+    } else if (currentIndex !== -1 && currentIndex < queue.length - 1) {
       playTrack(queue[currentIndex + 1]);
+    } else if (currentIndex === queue.length - 1) {
+      // Loop back to start of queue if loop is on or just reached end
+      playTrack(queue[0]);
     }
-  }, [queue, currentTrack, playTrack]);
+  }, [queue, currentTrack, activeVideo, isShuffle, playTrack]);
 
   const skipBackward = useCallback(() => {
     if (queue.length === 0) return;
@@ -101,6 +109,19 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addToQueue = useCallback((track: YouTubeVideo) => {
     setQueue(prev => [...prev, track]);
   }, []);
+
+  const toggleMute = useCallback(() => {
+    setVolume(prev => prev === 0 ? 70 : 0);
+  }, []);
+
+  const seekTo = useCallback((seconds: number) => {
+    setProgress(seconds);
+    setSeekRequest({ time: seconds, ts: Date.now() });
+  }, []);
+
+  const toggleShuffle = useCallback(() => setIsShuffle(prev => !prev), []);
+  const toggleLoop = useCallback(() => setIsLoop(prev => !prev), []);
+
   return (
     <MusicContext.Provider value={{
       currentTrack: activeType === 'music' ? currentTrack : activeVideo,
@@ -119,10 +140,17 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       resumeTrack,
       togglePlay,
       setVolume,
+      toggleMute,
+      seekTo,
+      seekRequest,
       setProgress,
       skipForward,
       skipBackward,
       addToQueue,
+      isShuffle,
+      isLoop,
+      toggleShuffle,
+      toggleLoop,
     }}>
       {children}
     </MusicContext.Provider>

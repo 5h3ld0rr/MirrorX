@@ -3,6 +3,7 @@ import authRoutes from "./auth.routes.js";
 import userRoutes from "./user.routes.js";
 import alarmRoutes from "./alarms.routes.js";
 import noteRoutes from "./notes.routes.js";
+import googleRoutes from "./google.routes.js";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
 router.use("/alarms", alarmRoutes);
 router.use("/notes", noteRoutes);
+router.use("/google", googleRoutes);
 
 export default router;

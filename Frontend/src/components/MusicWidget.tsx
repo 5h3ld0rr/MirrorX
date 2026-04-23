@@ -145,9 +145,9 @@ export const MusicWidget = ({ location }: { location?: string }) => {
             transition: 'all 0.3s ease'
           }}
         >
-         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px' }}>
             {isPlaying ? <Pause size={22} fill="white" color="white" /> : <Play size={22} fill="white" color="white" style={{ marginLeft: '1px' }} />}
-         </div>
+          </div>
         </motion.button>
 
         <motion.button
@@ -196,28 +196,28 @@ export const MusicWidget = ({ location }: { location?: string }) => {
                   max="100"
                   value={volume}
                   onChange={(e) => setVolume(parseInt(e.target.value))}
-                      style={{
-                        WebkitAppearance: 'slider-vertical',
-                        width: '4px',
-                        height: '100%',
-                        cursor: 'pointer',
-                        outline: 'none',
-                        accentColor: 'var(--accent-primary)'
-                      }}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  style={{
+                    WebkitAppearance: 'slider-vertical',
+                    width: '4px',
+                    height: '100%',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    accentColor: 'var(--accent-primary)'
+                  }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-              <motion.button
-                whileHover={{ color: 'var(--accent-primary)' }}
-                onClick={(e) => { e.stopPropagation(); setVolume(volume === 0 ? 70 : 0); }}
-                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '0.4rem' }}
-              >
-                {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-              </motion.button>
-            </div>
-          </div>
+          <motion.button
+            whileHover={{ color: 'var(--accent-primary)' }}
+            onClick={(e) => { e.stopPropagation(); setVolume(volume === 0 ? 70 : 0); }}
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '0.4rem' }}
+          >
+            {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          </motion.button>
+        </div>
+      </div>
     </motion.div>
   );
 };

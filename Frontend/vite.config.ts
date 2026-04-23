@@ -17,9 +17,8 @@ export default defineConfig(() => {
           rewrite: (path) => path.replace(/^\/api\/weather/, '')
         },
         '/api/google': {
-          target: 'https://www.googleapis.com',
+          target: 'http://localhost:5000',
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api\/google/, '')
         }
       }
     },
