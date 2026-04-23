@@ -27,13 +27,17 @@ export class BrowserService {
     
     if (process.platform === 'linux') {
       // Optimized for Raspberry Pi (Kiosk Mode)
-      const chromeFlags = `--kiosk --app=${url} --noerrdialogs --disable-infobars --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --disable-session-crashed-bubble --user-data-dir=/tmp/mirror_browser --password-store=basic`;
+      // Added permission bypass flags and treated localhost as a secure origin for camera/location access
+      const chromeFlags = `--kiosk --app=${url} --noerrdialogs --disable-infobars --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --disable-session-crashed-bubble --user-data-dir=/tmp/mirror_browser --password-store=basic --use-fake-ui-for-media-stream --unsafely-treat-insecure-origin-as-secure=http://localhost:5173,http://localhost:4173`;
       
-      // Use a simpler approach: check each browser one by one
+      // Search for the V4L2 converter in all common paths (libcamera and the new rpicam stack)
+      const preload = `export LD_PRELOAD=$(ls /usr/lib/aarch64-linux-gnu/libcamera/v4l2-convert.so /usr/lib/arm-linux-gnueabihf/libcamera/v4l2-convert.so /usr/lib/aarch64-linux-gnu/rpicam-apps/v4l2-convert.so 2>/dev/null | head -n 1)`;
+      
+      // Support both X11 (DISPLAY) and Wayland
       command = `
         export DISPLAY=:0; 
         export WAYLAND_DISPLAY=wayland-0; 
-        export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libcamera/v4l2-convert.so; 
+        ${preload}; 
         if command -v chromium-browser >/dev/null; then chromium-browser ${chromeFlags};
         elif command -v chromium >/dev/null; then chromium ${chromeFlags};
         elif command -v google-chrome >/dev/null; then google-chrome ${chromeFlags};
