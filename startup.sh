@@ -1,4 +1,9 @@
 #!/bin/bash
+
+export NVM_DIR="$HOME/.nvm"
+source "$NVM_DIR/nvm.sh"
+nvm use 24.15.0
+
 # MirrorX Startup Script
 # This script pulls latest changes, installs dependencies, builds, and starts the apps.
 
