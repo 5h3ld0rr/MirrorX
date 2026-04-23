@@ -437,12 +437,11 @@ export const CalendarApp = ({ user }: { user: any }) => {
       <div 
         style={{ 
           flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column', 
           overflowY: 'auto', 
-          touchAction: 'pan-y', 
-          WebkitOverflowScrolling: 'touch',
-          paddingBottom: '10rem' // Added extra space at the bottom
+          overflowX: 'hidden',
+          paddingBottom: '12rem',
+          display: 'flex',
+          flexDirection: 'column'
         }} 
         className="hide-scrollbar"
       >
