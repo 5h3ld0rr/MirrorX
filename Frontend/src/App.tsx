@@ -48,6 +48,7 @@ interface UserProfile {
   musicSyncEnabled?: boolean;
   autoBrightnessEnabled?: boolean;
   motionWakeEnabled?: boolean;
+  faceWakeEnabled?: boolean;
   widgetSettings?: {
     [key: string]: { enabled: boolean; location: string };
   };

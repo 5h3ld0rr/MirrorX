@@ -35,6 +35,7 @@ export const updateProfile = async (data: {
   musicSyncEnabled?: boolean,
   autoBrightnessEnabled?: boolean,
   motionWakeEnabled?: boolean,
+  faceWakeEnabled?: boolean,
   calendarEvents?: any
 }) => {
   const token = await auth.currentUser?.getIdToken();

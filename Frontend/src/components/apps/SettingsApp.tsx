@@ -92,6 +92,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
   const [musicSyncEnabled, setMusicSyncEnabled] = useState(user.musicSyncEnabled || false);
   const [autoBrightnessEnabled, setAutoBrightnessEnabled] = useState(user.autoBrightnessEnabled || false);
   const [motionWakeEnabled, setMotionWakeEnabled] = useState(user.motionWakeEnabled || false);
+  const [faceWakeEnabled, setFaceWakeEnabled] = useState(user.faceWakeEnabled || false);
   const [rgbHue, setRgbHue] = useState(0);
   const [rgbSat] = useState(100);
   const [standByDelay, setStandByDelay] = useState(user.standByDelay || CONFIG.STANDBY_DELAY);
@@ -120,6 +121,7 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
       setTerminationDelay(user.terminationDelay || CONFIG.TERMINATION_DELAY);
       setAutoBrightnessEnabled(user.autoBrightnessEnabled || false);
       setMotionWakeEnabled(user.motionWakeEnabled || false);
+      setFaceWakeEnabled(user.faceWakeEnabled || false);
       if (user.widgetSettings) setWidgetSettings(user.widgetSettings);
       
       if (user.rgbColor) {
@@ -261,6 +263,19 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
         onUpdateUser({ motionWakeEnabled: enabled });
       } catch (err) {
         console.error('Failed to save motion wake settings:', err);
+      }
+    }, 800);
+  }, [onUpdateUser]);
+
+  const saveFaceWakeToCloud = useCallback((enabled: boolean) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await updateProfile({ faceWakeEnabled: enabled });
+        onUpdateUser({ faceWakeEnabled: enabled });
+        socketService.emit('face:toggle', enabled);
+      } catch (err) {
+        console.error('Failed to save face wake settings:', err);
       }
     }, 800);
   }, [onUpdateUser]);
@@ -902,6 +917,62 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
                       width: '20px', 
                       height: '20px', 
                       background: motionWakeEnabled ? 'black' : 'white', 
+                      borderRadius: '50%',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }} />
+                  </div>
+                </div>
+                
+                <div 
+                  onClick={() => {
+                    const newVal = !faceWakeEnabled;
+                    setFaceWakeEnabled(newVal);
+                    saveFaceWakeToCloud(newVal);
+                  }}
+                  style={{ 
+                    marginBottom: '1rem',
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '1.25rem 1.5rem', 
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    cursor: 'pointer' 
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <div style={{ 
+                      width: '40px', 
+                      height: '40px', 
+                      borderRadius: '10px', 
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Bot size={20} color={faceWakeEnabled ? 'var(--accent-primary)' : 'var(--text-muted)'} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>Neural Face Wake</h4>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Wakes screen when a face is detected</p>
+                    </div>
+                  </div>
+                  <div style={{ 
+                    width: '50px', 
+                    height: '26px', 
+                    background: faceWakeEnabled ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', 
+                    borderRadius: '20px', 
+                    position: 'relative',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    <div style={{ 
+                      position: 'absolute', 
+                      left: faceWakeEnabled ? '27px' : '3px', 
+                      top: '3px', 
+                      width: '20px', 
+                      height: '20px', 
+                      background: faceWakeEnabled ? 'black' : 'white', 
                       borderRadius: '50%',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     }} />
