@@ -514,19 +514,19 @@ export const CalendarApp = ({ user }: { user: any }) => {
                       flexDirection: 'column', 
                       gap: '4px',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      minHeight: '100px'
-                    }}
-                  >
-                    <div style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 0.9 }}>{dayNum}</div>
-                    {holiday && <div style={{ fontSize: '0.6rem', color: isToday ? '#ffffff' : getDayTypeColor(holiday.type), fontWeight: 700, borderRadius: '4px', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{holiday.name}</div>}
-                    {customE.length > 0 && <div style={{ marginTop: 'auto', display: 'flex', gap: '2px' }}>{customE.map((_, idx) => <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'black' : 'var(--accent-primary)' }} />)}</div>}
-                  </motion.button>
-                );
-              })}
-            </div>
+                    minHeight: '80px'
+                  }}
+                >
+                  <div style={{ fontSize: '1.8rem', fontWeight: 900, lineHeight: 0.9 }}>{dayNum}</div>
+                  {holiday && <div style={{ fontSize: '0.6rem', color: isToday ? '#ffffff' : getDayTypeColor(holiday.type), fontWeight: 700, borderRadius: '4px', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{holiday.name}</div>}
+                  {customE.length > 0 && <div style={{ marginTop: 'auto', display: 'flex', gap: '2px' }}>{customE.map((_, idx) => <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'black' : 'var(--accent-primary)' }} />)}</div>}
+                </motion.button>
+              );
+            })}
+          </div>
 
-            {/* Monthly Summary Section */}
-            <div style={{ marginTop: '4rem', padding: '0 1rem 5rem' }}>
+          {/* Monthly Summary Section */}
+          <div style={{ marginTop: '4rem', padding: '0 1rem 20rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h3 style={{ fontSize: '1.8rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>
                   {months[viewDate.getMonth()]}'s Schedule

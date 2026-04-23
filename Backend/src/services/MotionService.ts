@@ -22,7 +22,18 @@ export class MotionService {
     if (process.platform === 'linux') {
       try {
         const { Gpio } = require('onoff');
-        this.pir = new Gpio(this.MOTION_GPIO, 'in', 'both');
+        
+        // Try to initialize with 'both' edges. If it fails with EINVAL, try 'rising'.
+        try {
+          this.pir = new Gpio(this.MOTION_GPIO, 'in', 'both');
+        } catch (e: any) {
+          if (e.code === 'EINVAL') {
+            console.warn(`⚠️ PIR 'both' edges not supported on GPIO ${this.MOTION_GPIO}, falling back to 'rising'`);
+            this.pir = new Gpio(this.MOTION_GPIO, 'in', 'rising');
+          } else {
+            throw e;
+          }
+        }
         
         console.log(`✅ PIR Sensor initialized on GPIO ${this.MOTION_GPIO}`);
 
