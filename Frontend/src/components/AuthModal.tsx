@@ -271,7 +271,8 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth, isOnline }: {
                 <div className="input-group">
                   <label>Email Address</label>
                   <input 
-                    type="email" 
+                    type="text" 
+                    inputMode="email"
                     placeholder="name@domain.com" 
                     value={email} 
                     onChange={e => setEmail(e.target.value)}
