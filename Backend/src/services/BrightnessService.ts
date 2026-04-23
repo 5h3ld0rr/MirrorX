@@ -86,18 +86,18 @@ class BrightnessService {
   }
 
   private calculateBrightness(lux: number): number {
-    // High sensitivity: reach 100% at 600 lux (standard room)
-    // Higher floor (25%) to prevent "too dim" feeling
-    const maxLux = 600; 
-    const minB = 25;
+    // Ultra sensitivity: reach 100% at 300 lux (standard room light)
+    // Minimum floor increased to 30%
+    const maxLux = 300; 
+    const minB = 30;
     const maxB = 100;
     
     if (lux <= 0.1) return minB;
     if (lux >= maxLux) return maxB;
     
-    // Square root curve: rises very quickly to ensure visibility
+    // Stiff Power Curve (0.4 exponent): Gets very bright very quickly
     const normalized = lux / maxLux;
-    const b = minB + Math.sqrt(normalized) * (maxB - minB);
+    const b = minB + Math.pow(normalized, 0.4) * (maxB - minB);
     
     return Math.min(maxB, Math.max(minB, Math.round(b)));
   }

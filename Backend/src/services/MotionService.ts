@@ -22,7 +22,16 @@ export class MotionService {
     if (process.platform === 'linux') {
       try {
         const { Gpio } = require('onoff');
+        const fs = require('fs');
         
+        // Manual cleanup of stale exports to prevent EINVAL on write
+        try {
+          if (fs.existsSync(`/sys/class/gpio/gpio${this.MOTION_GPIO}`)) {
+            fs.writeFileSync('/sys/class/gpio/unexport', String(this.MOTION_GPIO));
+            console.log(`♻️  Cleaned up stale GPIO ${this.MOTION_GPIO} export`);
+          }
+        } catch (e) {}
+
         // Try to initialize with 'both' edges. If it fails with EINVAL, try 'rising'.
         try {
           this.pir = new Gpio(this.MOTION_GPIO, 'in', 'both');
