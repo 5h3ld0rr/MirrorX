@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   Scan,
+  Timer,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -31,6 +32,7 @@ import { ReminderWidget } from './components/ReminderWidget';
 import { NewsWidget } from './components/NewsWidget';
 import { VoiceAssistant } from './components/VoiceAssistant';
 import { VirtualKeyboard } from './components/VirtualKeyboard';
+import { BrightnessManager } from './components/BrightnessManager';
 
 interface UserProfile {
   uid: string;
@@ -44,10 +46,13 @@ interface UserProfile {
   brightness?: number;
   appBrightness?: number;
   musicSyncEnabled?: boolean;
+  autoBrightnessEnabled?: boolean;
+  motionWakeEnabled?: boolean;
   widgetSettings?: {
     [key: string]: { enabled: boolean; location: string };
   };
 }
+import { MotionManager } from './components/MotionManager';
 
 function App() {
   const [user, setUser] = useState<UserProfile | null>();
@@ -65,6 +70,8 @@ function App() {
   const [bleConnecting, setBleConnecting] = useState(false);
   const [bleDeviceName, setBleDeviceName] = useState('');
   const [isInhibitingSleep, setIsInhibitingSleep] = useState(false);
+  const [activeTimer, setActiveTimer] = useState<{ remaining: number; total: number; label: string } | null>(null);
+  const timerIntervalRef = useRef<any>(null);
 
   // Auto-connect BLE and apply saved RGB color
   const autoConnectBLE = async (profile: any) => {
@@ -185,6 +192,19 @@ function App() {
   };
 
   const disconnectBLE = async () => {
+    if (bleCharacteristic) {
+      try {
+        // HANDOVER: Restore hardware state for mobile app before disconnecting
+        // 1. Force Sensitivity 100
+        await bleCharacteristic.writeValue(new Uint8Array([0x7E, 0x07, 0x06, 0x64, 0x00, 0x00, 0x00, 0x00, 0xEF]));
+        // 2. Force Mode 0x00 (Rock / Internal Mic)
+        await bleCharacteristic.writeValue(new Uint8Array([0x7E, 0x07, 0x03, 0x00, 0x03, 0xFF, 0xFF, 0x00, 0xEF]));
+        await new Promise(r => setTimeout(r, 200));
+      } catch (e) {
+        console.warn('Silent handover failed:', e);
+      }
+    }
+    
     if (bleDevice?.gatt?.connected) {
       bleDevice.gatt.disconnect();
     }
@@ -200,6 +220,12 @@ function App() {
     if (isNewLogin) {
       setShowWelcome(true);
       autoConnectBLE(userData);
+    }
+    // Sync auto-brightness state with backend sensor
+    if (userData.autoBrightnessEnabled) {
+      import('./services/socket').then(({ socketService }) => {
+        socketService.emit('brightness:toggle', true);
+      });
     }
   };
 
@@ -217,6 +243,89 @@ function App() {
     setHasInteracted(false);
     setIsLauncherOpen(false);
     setActiveApp(null);
+  };
+
+  const handleVoiceAction = async (action: any) => {
+    switch (action.type) {
+      case 'PLAY_MUSIC':
+        try {
+          const { youtubeService } = await import('./services/youtube');
+          // Try music category first, then fallback to general
+          let results = await youtubeService.searchMusic(action.query, 1);
+          if (results.length === 0) {
+            results = await youtubeService.searchVideos(action.query, 1);
+          }
+
+          if (results.length > 0) {
+            // Dispatch with a slight delay
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('VOICE_PLAY_MUSIC', { detail: results[0] }));
+            }, 100);
+          }
+        } catch (e) {
+          console.error('Voice Play Error:', e);
+        }
+        break;
+
+      case 'STOP_MUSIC':
+        window.dispatchEvent(new CustomEvent('VOICE_STOP_MUSIC'));
+        break;
+
+      case 'RESUME_MUSIC':
+        window.dispatchEvent(new CustomEvent('VOICE_RESUME_MUSIC'));
+        break;
+
+      case 'CHANGE_ACCENT':
+        const colorMap: Record<string, string> = {
+          'red': '#ff3d3d',
+          'blue': '#00f2ff',
+          'green': '#3dff70',
+          'yellow': '#ffeb3d',
+          'purple': '#bf3dff',
+          'pink': '#ff3dbb',
+          'orange': '#ff913d',
+          'emerald': '#3dffab',
+          'ruby': '#e0115f',
+          'gold': '#ffd700'
+        };
+        const hex = colorMap[action.color.toLowerCase()] || action.color;
+        handleAuth({ ...user, accentColor: hex });
+        break;
+
+      case 'SET_TIMER':
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        
+        let seconds = action.duration;
+        if (action.unit === 'm') seconds *= 60;
+        if (action.unit === 'h') seconds *= 3600;
+
+        setActiveTimer({
+          total: seconds,
+          remaining: seconds,
+          label: 'Timer'
+        });
+
+        timerIntervalRef.current = setInterval(() => {
+          setActiveTimer(prev => {
+            if (!prev || prev.remaining <= 0) {
+              if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+              if (prev && prev.remaining === 0) {
+                // Timer finished - could play a sound
+                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                audio.play();
+              }
+              return null;
+            }
+            return { ...prev, remaining: prev.remaining - 1 };
+          });
+        }, 1000);
+        break;
+
+      case 'STOP_TIMER':
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        setActiveTimer(null);
+        break;
+    }
   };
 
 
@@ -273,7 +382,7 @@ function App() {
 
       if (isAuthModalOpen || showWelcome || isInhibitingSleep) return;
 
-      const standbyVal = user?.standByDelay || CONFIG.STANDBY_DELAY;
+      const standbyVal = user?.standByDelay === 0 ? CONFIG.STANDBY_DELAY : (user?.standByDelay || CONFIG.STANDBY_DELAY);
       const logoutVal = user?.terminationDelay || CONFIG.TERMINATION_DELAY;
 
       if (hasInteracted) {
@@ -352,7 +461,11 @@ function App() {
       );
     }
     if (settings.music?.enabled && settings.music?.location === location) {
-      widgets.push(<div key="music" style={{ pointerEvents: 'auto' }}><MusicWidget location={location} /></div>);
+      widgets.push(
+        <div key="music" style={{ pointerEvents: 'auto' }}>
+          <MusicWidget />
+        </div>
+      );
     }
     
     return widgets;
@@ -373,7 +486,118 @@ function App() {
         transition={{ duration: 1.5, ease: "easeOut" }}
         className="mirror-container"
       >
-        <VoiceAssistant user={user}/>
+        <VoiceAssistant user={user} onAction={handleVoiceAction} />
+        
+        {/* Global Timer Notification */}
+        <AnimatePresence>
+          {activeTimer && (
+            <motion.div
+              initial={{ opacity: 0, x: 50, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 30, scale: 0.95 }}
+              style={{
+                position: 'fixed',
+                top: '50%',
+                right: '2rem',
+                transform: 'translateY(-50%)',
+                zIndex: 3000,
+                pointerEvents: 'auto'
+              }}
+            >
+              <div style={{
+                padding: '1.5rem',
+                borderRadius: '32px',
+                background: 'rgba(10, 10, 10, 0.5)',
+                backdropFilter: 'blur(40px) saturate(150%)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6), 0 0 40px var(--accent-glow)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1.25rem',
+                minWidth: '220px',
+                position: 'relative'
+              }}>
+                {/* Progress Ring */}
+                <div style={{ position: 'relative', width: '56px', height: '56px' }}>
+                  <svg width="56" height="56" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle 
+                      cx="28" cy="28" r="25" 
+                      fill="none" 
+                      stroke="rgba(255,255,255,0.05)" 
+                      strokeWidth="2" 
+                    />
+                    <motion.circle 
+                      cx="28" cy="28" r="25" 
+                      fill="none" 
+                      stroke="var(--accent-primary)" 
+                      strokeWidth="2" 
+                      strokeDasharray="157"
+                      initial={{ strokeDashoffset: 157 }}
+                      animate={{ 
+                        strokeDashoffset: 157 - (157 * (activeTimer.remaining / activeTimer.total)) 
+                      }}
+                      transition={{ duration: 1, ease: "linear" }}
+                      style={{ 
+                        filter: 'drop-shadow(0 0 5px var(--accent-primary))'
+                      }}
+                    />
+                  </svg>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Timer size={18} color="var(--accent-primary)" style={{ opacity: 0.6 }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ 
+                    fontSize: '0.6rem', 
+                    color: 'var(--accent-primary)', 
+                    fontWeight: 700,
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.2em',
+                    marginBottom: '4px'
+                  }}>
+                    {activeTimer.label}
+                  </div>
+                  <div style={{ 
+                    fontSize: '2.5rem', 
+                    fontWeight: 300, 
+                    fontFamily: 'Outfit, Inter, sans-serif',
+                    lineHeight: 1,
+                    letterSpacing: '-0.02em',
+                    color: 'white'
+                  }}>
+                    {Math.floor(activeTimer.remaining / 60)}<span style={{ opacity: 0.4, fontSize: '1.5rem', margin: '0 2px' }}>:</span>{(activeTimer.remaining % 60).toString().padStart(2, '0')}
+                  </div>
+                </div>
+
+                <motion.button 
+                  whileHover={{ scale: 1.1, background: 'rgba(255,255,255,0.1)' }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => {
+                    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+                    setActiveTimer(null);
+                  }}
+                  style={{ 
+                    background: 'rgba(255,255,255,0.05)', 
+                    border: 'none', 
+                    color: 'rgba(255,255,255,0.4)', 
+                    cursor: 'pointer', 
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginLeft: '0.5rem'
+                  }}
+                >
+                  <X size={16} />
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Dynamic Widget Corners */}
         <div style={{ position: 'fixed', top: '2rem', left: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'flex-start', zIndex: 2000, pointerEvents: 'none' }}>
            {getWidgetsForLocation('top-left')}
@@ -505,15 +729,19 @@ function App() {
         />
         <VirtualKeyboard />
       </motion.div>
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'black',
-        opacity: 1 - (user?.appBrightness ?? CONFIG.DEFAULT_APP_BRIGHTNESS) / 100,
-        pointerEvents: 'none',
-        zIndex: 10000,
-        transition: 'opacity 0.3s ease'
-      }} />
+      <BrightnessManager 
+        autoEnabled={!!user?.autoBrightnessEnabled} 
+        manualBrightness={user?.appBrightness ?? CONFIG.DEFAULT_APP_BRIGHTNESS}
+      />
+      <MotionManager 
+        enabled={!!user?.motionWakeEnabled}
+        onMotionDetected={() => {
+          if (!hasInteracted) {
+            setHasInteracted(true);
+            console.log("🌊 Motion detected - Waking up MirrorX");
+          }
+        }}
+      />
     </>
   );
 }

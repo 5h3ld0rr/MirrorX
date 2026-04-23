@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Music, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Search, Volume2, Plus, ListMusic, Trash2 } from 'lucide-react';
+import { Music, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Search, Volume2, VolumeX, Plus, ListMusic, Trash2 } from 'lucide-react';
 import type { YouTubeVideo } from '../../services/youtube';
 import { youtubeService } from '../../services/youtube';
 import { useMusic } from '../../context/MusicContext';
@@ -560,9 +560,9 @@ export const MusicApp = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                 <button
                   onClick={(e) => { e.stopPropagation(); toggleShuffle(); }}
-                  style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: isShuffle ? 'var(--accent-primary)' : 'rgba(255,255,255,0.3)' }}
+                  style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', color: isShuffle ? 'var(--accent-primary)' : 'rgba(255,255,255,0.3)', transition: 'all 0.3s' }}
                 >
-                  <Shuffle size={18} />
+                  <Shuffle size={18} color="currentColor" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); skipBackward(); }}
@@ -570,6 +570,7 @@ export const MusicApp = () => {
                 >
                   <SkipBack size={24} fill="white" color="white" />
                 </button>
+
                 <motion.button
                   whileHover={{ scale: 1.1, boxShadow: '0 0 20px var(--accent-glow)' }}
                   whileTap={{ scale: 0.9 }}
@@ -583,13 +584,16 @@ export const MusicApp = () => {
                     justifyContent: 'center',
                     color: 'var(--accent-primary)',
                     cursor: 'pointer',
+                    background: 'none', 
+                    border: 'none',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px' }}>
-                    {isPlaying ? <Pause size={24} fill="white" color="white" /> : <Play size={24} fill="white" color="white" style={{ marginLeft: '1px' }} />}
+                    {isPlaying ? <Pause size={24} fill="white" color="white" /> : <Play size={24} fill="white" color="white" style={{ marginLeft: '2px' }} />}
                   </div>
                 </motion.button>
+
                 <button
                   onClick={(e) => { e.stopPropagation(); skipForward(); }}
                   style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
@@ -598,9 +602,9 @@ export const MusicApp = () => {
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); toggleLoop(); }}
-                  style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: isLoop ? 'var(--accent-primary)' : 'rgba(255,255,255,0.3)' }}
+                  style={{ background: 'none', border: 'none', padding: '0.5rem', cursor: 'pointer', color: isLoop ? 'var(--accent-primary)' : 'rgba(255,255,255,0.3)', transition: 'all 0.3s' }}
                 >
-                  <Repeat size={18} />
+                  <Repeat size={18} color="currentColor" />
                 </button>
               </div>
               {/* Progress Bar */}
@@ -631,7 +635,7 @@ export const MusicApp = () => {
                 onClick={(e) => { e.stopPropagation(); toggleMute(); }}
                 style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
               >
-                <Volume2 size={20} color={volume === 0 ? '#ff4444' : 'rgba(255,255,255,0.5)'} />
+                {volume === 0 ? <VolumeX size={20} color="#ff4444" /> : <Volume2 size={20} color="rgba(255,255,255,0.5)" />}
               </button>
               <input
                 type="range"

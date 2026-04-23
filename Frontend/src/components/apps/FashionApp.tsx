@@ -1,11 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, TrendingUp, Filter, Heart, Camera, X, Scan, Zap, RefreshCw, Search, ShoppingCart, Sparkles, UserCheck } from 'lucide-react';
+import { ShoppingBag, TrendingUp, Filter, Heart, Camera, X, Scan, Zap, Search, ShoppingCart, Sparkles, UserCheck } from 'lucide-react';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 
 export const FashionApp = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isTryingOn, setIsTryingOn] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [scale, setScale] = useState(1);
   const [opacity, setOpacity] = useState(0.9);
@@ -16,9 +15,7 @@ export const FashionApp = () => {
   const [isCapturing, setIsCapturing] = useState(false);
   const [limbSync, setLimbSync] = useState({ arms: true, legs: true });
   const [garmentPos, setGarmentPos] = useState({ x: 0, y: 0 });
-  const [compositeIntensity, setCompositeIntensity] = useState(0.8);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeCategory, setActiveCategory] = useState('Featured');
@@ -49,7 +46,6 @@ export const FashionApp = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        setCameraActive(true);
       }
     } catch (err) {
       console.error("Error accessing camera:", err);
@@ -60,7 +56,6 @@ export const FashionApp = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
       tracks.forEach(track => track.stop());
-      setCameraActive(false);
     }
   };
 
@@ -480,7 +475,7 @@ const VirtualTryOnModal = ({
   limbSync, setLimbSync,
   onAddToCart
 }: any) => {
-  const [scanStage, setScanStage] = useState<'none' | 'scanning' | 'measuring' | 'complete'>('none');
+  const [scanStage, setScanStage] = useState<'none' | 'aligning' | 'scanning' | 'measuring' | 'complete'>('none');
   const [measurements, setMeasurements] = useState({ height: '--', shoulders: '--', waist: '--' });
   const [captureProgress, setCaptureProgress] = useState(0);
 
@@ -509,7 +504,7 @@ const VirtualTryOnModal = ({
         setCaptureProgress(0);
         
         const interval = setInterval(() => {
-          setCaptureProgress(prev => {
+          setCaptureProgress((prev: number) => {
             if (prev >= 100) {
               clearInterval(interval);
               return 100;
@@ -754,7 +749,7 @@ const VirtualTryOnModal = ({
                       zIndex: 10
                     }}>
                       <button 
-                        onClick={() => setLimbSync(p => ({ ...p, arms: !p.arms }))}
+                        onClick={() => setLimbSync((p: any) => ({ ...p, arms: !p.arms }))}
                         className="glass-panel"
                         style={{ 
                           padding: '1rem 2rem', 
@@ -771,7 +766,7 @@ const VirtualTryOnModal = ({
                         {limbSync.arms ? 'ARMS FORWARD' : 'SYNC ARMS'}
                       </button>
                       <button 
-                        onClick={() => setLimbSync(p => ({ ...p, legs: !p.legs }))}
+                        onClick={() => setLimbSync((p: any) => ({ ...p, legs: !p.legs }))}
                         className="glass-panel"
                         style={{ 
                           padding: '1rem 2rem', 
@@ -884,7 +879,7 @@ const VirtualTryOnModal = ({
                         key={item.id}
                         drag
                         dragMomentum={false}
-                        onDrag={(_, info) => setGarmentPos(prev => ({ x: prev.x + info.delta.x, y: prev.y + info.delta.y }))}
+                        onDrag={(_, info) => setGarmentPos((prev: any) => ({ x: prev.x + info.delta.x, y: prev.y + info.delta.y }))}
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ 
                           opacity: processing ? 0.1 : opacity, 

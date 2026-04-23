@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+
 // https://vite.dev/config/
 export default defineConfig(() => {
   return {
@@ -19,14 +20,14 @@ export default defineConfig(() => {
         '/api/google': {
           target: 'http://localhost:5000',
           changeOrigin: true,
+          // No rewrite needed as Backend handles /api/google path
+        },
+        '/api/geocoding': {
+          target: 'https://geocoding-api.open-meteo.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/geocoding/, '')
         }
       }
-    },
-
-    preview: {
-      port: 80
     }
   }
 })
-
-

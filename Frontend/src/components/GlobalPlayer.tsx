@@ -2,99 +2,136 @@ import { useEffect, useRef, useState } from 'react';
 import { useMusic } from '../context/MusicContext';
 
 export const GlobalPlayer = () => {
-  const { currentTrack, isPlaying, volume, activeType, setProgress, setDuration, seekRequest, skipForward, isLoop } = useMusic();
+  const { 
+    currentTrack, isPlaying, volume, activeType, 
+    progress, duration, setProgress, setDuration, 
+    isLoop, skipForward, seekRequest 
+  } = useMusic();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
+  const progressRef = useRef(progress);
+  const durationRef = useRef(duration);
+  const loadedRef = useRef(loaded);
+  const trackIdAtLoad = useRef<string | null>(null);
+  const lastProgress = useRef(0);
+  const staleCounter = useRef(0);
 
-  // Send commands to YouTube iframe
+  // Sync refs
   useEffect(() => {
+    progressRef.current = progress;
+    durationRef.current = duration;
+    loadedRef.current = loaded;
+  }, [progress, duration, loaded]);
+
+  // Reset loaded state and metrics when track changes
+  useEffect(() => {
+    setLoaded(false);
+    setProgress(0);
+    setDuration(0);
+  }, [currentTrack?.id]);
+
+  const sendCommand = (func: string, args: any[] = []) => {
     const iframe = iframeRef.current;
     if (iframe && loaded && activeType === 'music') {
-      const command = isPlaying ? 'playVideo' : 'pauseVideo';
       iframe.contentWindow?.postMessage(JSON.stringify({ 
-        event: 'command', 
-        func: command, 
-        args: [] 
+        event: 'command', func, args 
       }), '*');
     }
+  };
+
+  // Play/Pause Control
+  useEffect(() => {
+    sendCommand(isPlaying ? 'playVideo' : 'pauseVideo');
   }, [isPlaying, loaded, activeType]);
 
-  // Handle seeking
+  // Volume & Track Sync
   useEffect(() => {
-    const iframe = iframeRef.current;
-    if (iframe && loaded && seekRequest && activeType === 'music') {
-      iframe.contentWindow?.postMessage(JSON.stringify({ 
-        event: 'command', 
-        func: 'seekTo', 
-        args: [seekRequest.time, true] 
-      }), '*');
+    sendCommand('setVolume', [volume]);
+  }, [volume, loaded, activeType, currentTrack?.id]);
+  
+  // Seek Handler
+  useEffect(() => {
+    if (seekRequest) {
+      sendCommand('seekTo', [seekRequest.time, true]);
     }
   }, [seekRequest, loaded, activeType]);
 
-  // Handle volume changes
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (iframe && loaded && activeType === 'music') {
-      iframe.contentWindow?.postMessage(JSON.stringify({ 
-        event: 'command', 
-        func: 'setVolume', 
-        args: [volume] 
-      }), '*');
-    }
-  }, [volume, loaded, activeType]);
-
-  // Sync IFrame Data (Time/Duration)
+  // Main Event Listener & Controller
   useEffect(() => {
     if (!loaded || activeType !== 'music') return;
 
     const handleMessage = (event: MessageEvent) => {
+      if (!loadedRef.current || trackIdAtLoad.current !== currentTrack?.id) return;
+      
       try {
         const data = JSON.parse(event.data);
         
+        // Time & Duration updates
         if (data.event === 'infoDelivery' && data.info) {
           if (data.info.currentTime !== undefined) setProgress(Math.floor(data.info.currentTime));
           if (data.info.duration !== undefined) setDuration(Math.floor(data.info.duration));
         }
 
-        // Handle video end for auto-skip
+        // Initialize state on Ready
+        if (data.event === 'onReady') {
+          sendCommand('setVolume', [volume]);
+        }
+
+        // Playback state transitions
         if (data.event === 'onStateChange') {
-          const state = data.info; // 0 is ended
-          if (state === 0) {
+          const rawState = data.info !== undefined ? data.info : (data.args ? data.args[0] : data.data);
+          const state = typeof rawState === 'object' ? rawState.playbackQuality : rawState; // Handle object wrapper
+          
+          const finalState = typeof rawState === 'number' ? rawState : (data.info?.playerState);
+
+          if (finalState === 0 || state === 0) { // ENDED
             if (isLoop) {
-              iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*');
+              sendCommand('seekTo', [0, true]);
+              sendCommand('playVideo');
             } else {
               skipForward();
             }
           }
         }
-      } catch (e) {
-        // Not a JSON message or not from YouTube
-      }
+      } catch (e) { /* Ignore non-JSON or external messages */ }
     };
 
     window.addEventListener('message', handleMessage);
     
-    // Set up polling for time updates if internal event listeners are not enough
-    const pollInterval = setInterval(() => {
-      const iframe = iframeRef.current;
-      if (iframe && loaded && isPlaying) {
-        iframe.contentWindow?.postMessage(JSON.stringify({ event: 'listening' }), '*');
+    // Watchdog for missing ENDED events and stale playback
+    const watchdog = setInterval(() => {
+      if (isPlaying) {
+        // Heartbeat to keep iFrame communication active
+        iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: 'listening' }), '*');
+        
+        // Staleness Heartbeat
+        if (progressRef.current === lastProgress.current && isPlaying) {
+          staleCounter.current++;
+        } else {
+          staleCounter.current = 0;
+        }
+        lastProgress.current = progressRef.current;
+
+        const isNearEnd = durationRef.current > 0 && progressRef.current >= durationRef.current - 1;
+        
+        // If we are near end and stuck for 4 seconds, or reached duration + 1
+        if ((isNearEnd && staleCounter.current >= 4) || (durationRef.current > 0 && progressRef.current >= durationRef.current + 1)) {
+          if (!isLoop) skipForward();
+        }
       }
     }, 1000);
 
     return () => {
       window.removeEventListener('message', handleMessage);
-      clearInterval(pollInterval);
+      clearInterval(watchdog);
     };
-  }, [loaded, activeType, isPlaying, setProgress, setDuration, skipForward, isLoop]);
+  }, [loaded, activeType, isPlaying, setProgress, setDuration, isLoop, skipForward]);
 
-  // Clean up and guards
-  if (!currentTrack || activeType !== 'music') {
-    return null;
-  }
+  if (!currentTrack || activeType !== 'music') return null;
 
   const handleLoad = () => {
     setLoaded(true);
+    trackIdAtLoad.current = currentTrack?.id;
   };
 
   const origin = window.location.origin;

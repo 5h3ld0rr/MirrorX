@@ -32,7 +32,10 @@ export const updateProfile = async (data: {
   standByDelay?: number,
   terminationDelay?: number,
   widgetSettings?: any,
-  musicSyncEnabled?: boolean
+  musicSyncEnabled?: boolean,
+  autoBrightnessEnabled?: boolean,
+  motionWakeEnabled?: boolean,
+  calendarEvents?: any
 }) => {
   const token = await auth.currentUser?.getIdToken();
   if (!token) throw new Error("No authenticated user");
@@ -151,6 +154,10 @@ export const createNote = async (data: any) => {
     },
     body: JSON.stringify(data)
   });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to create note');
+  }
   return await response.json();
 };
 
@@ -166,6 +173,10 @@ export const updateNote = async (id: string, data: any) => {
     },
     body: JSON.stringify(data)
   });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update note');
+  }
   return await response.json();
 };
 

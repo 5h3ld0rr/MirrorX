@@ -3,11 +3,15 @@ export const CONFIG = {
   STANDBY_DELAY: 15000, // 15 seconds of total inactivity (Stage 1: Sleep)
   TERMINATION_DELAY: 30000, 
   DEFAULT_APP_BRIGHTNESS: 100, // 100% brightness by default
+  DEFAULT_AUTO_BRIGHTNESS: false,
 
   // Face Authentication
   FACE_SCAN_INTERVAL: 5000,
   MAX_FACE_SCAN_FAIL_COUNT: 5,
 
   // Weather Settings
-  WEATHER_REFRESH_INTERVAL: 600000 // 10 minutes
+  WEATHER_REFRESH_INTERVAL: 600000, // 10 minutes
+
+  // Multimedia Settings
+  DEFAULT_MUSIC_SYNC: true, // Music-reactive LEDs off by default
 };

@@ -34,7 +34,8 @@ router.get("/profile", verifyToken as any, async (req: Request, res: Response) =
       brightness: rgbController.brightness !== undefined ? rgbController.brightness : userData.brightness,
       // Widget Settings
       widgetSettings: preferences.widgetSettings || userData.widgetSettings,
-      musicSyncEnabled: rgbController.musicSyncEnabled !== undefined ? rgbController.musicSyncEnabled : userData.musicSyncEnabled
+      musicSyncEnabled: rgbController.musicSyncEnabled !== undefined ? rgbController.musicSyncEnabled : userData.musicSyncEnabled,
+      autoBrightnessEnabled: preferences.autoBrightnessEnabled !== undefined ? preferences.autoBrightnessEnabled : userData.autoBrightnessEnabled
     });
   } catch (error: any) {
     console.error("❌ Error fetching profile:", error.message);
@@ -88,6 +89,12 @@ router.patch("/profile", verifyToken as any, async (req: Request, res: Response)
     }
     if (req.body.musicSyncEnabled !== undefined) {
       updateData['preferences.rgbController.musicSyncEnabled'] = req.body.musicSyncEnabled;
+    }
+    if (req.body.calendarEvents !== undefined) {
+      updateData.calendarEvents = req.body.calendarEvents;
+    }
+    if (req.body.autoBrightnessEnabled !== undefined) {
+      updateData['preferences.autoBrightnessEnabled'] = req.body.autoBrightnessEnabled;
     }
 
     if (Object.keys(updateData).length === 0) {

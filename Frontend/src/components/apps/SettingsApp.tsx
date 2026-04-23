@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap, Moon, Timer, MessageSquare, Cpu, FileText, X, Send, Bot, Music } from 'lucide-react';
+import { User, Bell, Shield, Palette, HelpCircle, LogOut, Check, Loader2, ChevronRight, Sun, Lock, Lightbulb, Bluetooth, BluetoothOff, Power, Zap, Moon, Timer, MessageSquare, Cpu, FileText, X, Send, Bot, Music, Sparkles, Scan } from 'lucide-react';
+import { socketService } from '../../services/socket';
 import { updateProfile, updateProfilePicture } from '../../lib/api';
 import { CONFIG } from '../../config';
 
@@ -89,6 +90,8 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
   const [brightness, setBrightness] = useState(user.brightness ?? 100);
   const [ledPower, setLedPower] = useState(true);
   const [musicSyncEnabled, setMusicSyncEnabled] = useState(user.musicSyncEnabled || false);
+  const [autoBrightnessEnabled, setAutoBrightnessEnabled] = useState(user.autoBrightnessEnabled || false);
+  const [motionWakeEnabled, setMotionWakeEnabled] = useState(user.motionWakeEnabled || false);
   const [rgbHue, setRgbHue] = useState(0);
   const [rgbSat] = useState(100);
   const [standByDelay, setStandByDelay] = useState(user.standByDelay || CONFIG.STANDBY_DELAY);
@@ -115,6 +118,8 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
       setMusicSyncEnabled(user.musicSyncEnabled || false);
       setStandByDelay(user.standByDelay || CONFIG.STANDBY_DELAY);
       setTerminationDelay(user.terminationDelay || CONFIG.TERMINATION_DELAY);
+      setAutoBrightnessEnabled(user.autoBrightnessEnabled || false);
+      setMotionWakeEnabled(user.motionWakeEnabled || false);
       if (user.widgetSettings) setWidgetSettings(user.widgetSettings);
       
       if (user.rgbColor) {
@@ -231,6 +236,31 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
         onUpdateUser({ accentColor: color });
       } catch (err) {
         console.error('Failed to save accent color:', err);
+      }
+    }, 800);
+  }, [onUpdateUser]);
+
+  const saveAutoBrightnessToCloud = useCallback((enabled: boolean) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await updateProfile({ autoBrightnessEnabled: enabled });
+        onUpdateUser({ autoBrightnessEnabled: enabled });
+        socketService.emit('brightness:toggle', enabled);
+      } catch (err) {
+        console.error('Failed to save auto brightness:', err);
+      }
+    }, 800);
+  }, [onUpdateUser]);
+
+  const saveMotionWakeToCloud = useCallback((enabled: boolean) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await updateProfile({ motionWakeEnabled: enabled });
+        onUpdateUser({ motionWakeEnabled: enabled });
+      } catch (err) {
+        console.error('Failed to save motion wake settings:', err);
       }
     }, 800);
   }, [onUpdateUser]);
@@ -625,11 +655,34 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
                     ))}
                 </div>
 
-                <div style={{ marginTop: '3.5rem' }}>
-                    <label style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', letterSpacing: '0.05em' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}><Sun size={14} /> Screen Brightness</span>
-                      <span style={{ fontFamily: 'monospace', fontSize: '1rem', color: 'white', fontWeight: 600 }}>{appBrightness}%</span>
-                    </label>
+                <div style={{ marginTop: '3.5rem', padding: '1.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', opacity: autoBrightnessEnabled ? 0.5 : 1, pointerEvents: autoBrightnessEnabled ? 'none' : 'auto', transition: 'all 0.3s ease' }}>
+                    <style>{`
+                      input[type="range"]::-webkit-slider-thumb {
+                        appearance: none;
+                        width: 22px;
+                        height: 22px;
+                        background: var(--accent-primary);
+                        border-radius: 50%;
+                        cursor: pointer;
+                        box-shadow: 0 0 15px var(--accent-primary);
+                        border: 3px solid white;
+                        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                        margin-top: -7px; /* Align with track */
+                      }
+                      input[type="range"]::-webkit-slider-runnable-track {
+                        width: 100%;
+                        height: 8px;
+                        cursor: pointer;
+                        border-radius: 4px;
+                      }
+                    `}</style>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <Sun size={18} color="var(--accent-primary)" />
+                        <span style={{ fontSize: '0.9rem', fontWeight: 600, letterSpacing: '0.05em', color: 'var(--text-muted)' }}>SCREEN BRIGHTNESS</span>
+                      </div>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>{appBrightness}%</span>
+                    </div>
                     <input
                       type="range"
                       min="10"
@@ -644,18 +697,76 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
                       style={{
                         width: '100%', height: '8px', borderRadius: '4px',
                         appearance: 'none', outline: 'none', cursor: 'pointer',
-                        background: `linear-gradient(to right, rgba(255,255,255,0.05) 0%, var(--accent-primary) ${appBrightness}%, rgba(255,255,255,0.08) ${appBrightness}%)`,
+                        background: `linear-gradient(to right, var(--accent-primary) 0%, var(--accent-primary) ${((appBrightness - 10) / 90) * 100}%, rgba(255,255,255,0.1) ${((appBrightness - 10) / 90) * 100}%)`,
                       }}
                     />
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.6rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       <span>Dimmed</span><span>Full Luminance</span>
                     </div>
                 </div>
-             </div>
-          </div>
+
+                <div 
+                  onClick={() => {
+                    const newVal = !autoBrightnessEnabled;
+                    setAutoBrightnessEnabled(newVal);
+                    saveAutoBrightnessToCloud(newVal);
+                  }}
+                  style={{ 
+                    marginTop: '2.5rem',
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '1.5rem', 
+                    background: 'rgba(255,255,255,0.03)',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    cursor: 'pointer' 
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <div style={{ 
+                      width: '40px', 
+                      height: '40px', 
+                      borderRadius: '10px', 
+                      background: autoBrightnessEnabled ? 'rgba(0, 242, 255, 0.1)' : 'rgba(255,255,255,0.05)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Sparkles size={20} color={autoBrightnessEnabled ? 'var(--accent-primary)' : 'var(--text-muted)'} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '1.1rem', marginBottom: '0.2rem' }}>Automatic Brightness</h4>
+                      <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Auto-adjust display luminosity based on ambient light.</p>
+                    </div>
+                  </div>
+                  <div style={{ 
+                    width: '50px', 
+                    height: '26px', 
+                    background: autoBrightnessEnabled ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', 
+                    borderRadius: '20px', 
+                    position: 'relative',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    <div style={{ 
+                      position: 'absolute', 
+                      left: autoBrightnessEnabled ? '27px' : '3px', 
+                      top: '3px', 
+                      width: '20px', 
+                      height: '20px', 
+                      background: autoBrightnessEnabled ? 'black' : 'white', 
+                      borderRadius: '50%',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }} />
+                  </div>
+                </div>
+              </div>
+           </div>
         );
       case 'Security': {
         const standbyOptions = [
+          { label: 'Auto (Smart)', value: 0 },
           { label: '5 seconds', value: 5000 },
           { label: '15 seconds', value: 15000 },
           { label: '30 seconds', value: 30000 },
@@ -741,9 +852,65 @@ export const SettingsApp = ({ user, onLogout, onUpdateUser, bleConnected, bleCon
              <div className="glass-panel" style={{ padding: '2rem', borderRadius: '24px' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem', paddingLeft: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Screen & Sleep</h3>
                 
+                <div 
+                  onClick={() => {
+                    const newVal = !motionWakeEnabled;
+                    setMotionWakeEnabled(newVal);
+                    saveMotionWakeToCloud(newVal);
+                  }}
+                  style={{ 
+                    marginBottom: '1rem',
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '1.25rem 1.5rem', 
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    cursor: 'pointer' 
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <div style={{ 
+                      width: '40px', 
+                      height: '40px', 
+                      borderRadius: '10px', 
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Scan size={20} color={motionWakeEnabled ? 'var(--accent-primary)' : 'var(--text-muted)'} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>Automatic Wake Up</h4>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Wakes screen automatically</p>
+                    </div>
+                  </div>
+                  <div style={{ 
+                    width: '50px', 
+                    height: '26px', 
+                    background: motionWakeEnabled ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', 
+                    borderRadius: '20px', 
+                    position: 'relative',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    <div style={{ 
+                      position: 'absolute', 
+                      left: motionWakeEnabled ? '27px' : '3px', 
+                      top: '3px', 
+                      width: '20px', 
+                      height: '20px', 
+                      background: motionWakeEnabled ? 'black' : 'white', 
+                      borderRadius: '50%',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }} />
+                  </div>
+                </div>
+
                 <SettingRow 
                   title="Turn my screen off after"
-                  subtitle="Dims the display to save energy when no motion is detected"
+                  subtitle="Turns off the display to save energy"
                   icon={Moon}
                   value={standByDelay}
                   options={standbyOptions}

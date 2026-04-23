@@ -17,6 +17,8 @@ export const NotesApp = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   
   // Form State
   const [title, setTitle] = useState('');
@@ -46,6 +48,7 @@ export const NotesApp = () => {
     setTitle('');
     setContent('');
     setColor('#00f2ff');
+    setSaveError(null);
     setIsModalOpen(true);
   };
 
@@ -54,22 +57,31 @@ export const NotesApp = () => {
     setTitle(note.title);
     setContent(note.content);
     setColor(note.color);
+    setSaveError(null);
     setIsModalOpen(true);
   };
 
   const handleSave = async () => {
-    if (!title && !content) return;
+    if (!title.trim() && !content.trim()) {
+      setSaveError('Please add a title or content before saving.');
+      return;
+    }
     
+    setIsSaving(true);
+    setSaveError(null);
     try {
       if (editingNote) {
         await updateNote(editingNote.id, { title, content, color });
       } else {
         await createNote({ title, content, color });
       }
-      fetchNotes();
+      await fetchNotes();
       setIsModalOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save note:', err);
+      setSaveError(err.message || 'Failed to save note. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -169,7 +181,7 @@ export const NotesApp = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(15px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '2rem' }}
-            onClick={() => setIsModalOpen(false)}
+            onClick={() => { if (!isSaving) setIsModalOpen(false); }}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -182,8 +194,9 @@ export const NotesApp = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 300 }}>{editingNote ? 'Edit Note' : 'New Note'}</h2>
                 <button 
-                  onClick={() => setIsModalOpen(false)}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                  onClick={() => { if (!isSaving) setIsModalOpen(false); }}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.4 : 1 }}
+                  disabled={isSaving}
                 >
                   <X size={24} />
                 </button>
@@ -220,6 +233,21 @@ export const NotesApp = () => {
                 />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginTop: '1rem' }}>
+                  {saveError && (
+                    <div style={{ 
+                      background: 'rgba(255,50,50,0.12)', 
+                      border: '1px solid rgba(255,80,80,0.3)', 
+                      borderRadius: '12px', 
+                      padding: '0.8rem 1.2rem', 
+                      color: '#ff6b6b', 
+                      fontSize: '0.9rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      ⚠️ {saveError}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-evenly' }}>
                       {colors.map(c => (
@@ -246,25 +274,31 @@ export const NotesApp = () => {
 
                   <button 
                     onClick={handleSave}
+                    disabled={isSaving}
                     style={{ 
                       width: '100%',
                       padding: '1.2rem', 
                       borderRadius: '16px', 
-                      background: 'var(--accent-primary)', 
+                      background: isSaving ? 'rgba(0,242,255,0.5)' : 'var(--accent-primary)', 
                       color: 'black', 
                       fontWeight: 700, 
                       fontSize: '1.1rem',
                       border: 'none', 
-                      cursor: 'pointer', 
+                      cursor: isSaving ? 'not-allowed' : 'pointer', 
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center',
                       gap: '0.8rem',
                       boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-                      marginTop: '1rem'
+                      marginTop: '1rem',
+                      opacity: isSaving ? 0.8 : 1,
+                      transition: 'all 0.2s'
                     }}
                   >
-                    <Save size={22} /> Save Note
+                    {isSaving 
+                      ? <><Loader2 size={22} className="animate-spin" /> Saving...</>
+                      : <><Save size={22} /> Save Note</>
+                    }
                   </button>
                 </div>
               </div>
