@@ -24,23 +24,26 @@ export class MotionService {
         const { Gpio } = require('onoff');
         const fs = require('fs');
         
-        // Manual cleanup of stale exports to prevent EINVAL on write
+        // 1. Force unexport if already exists to ensure clean state
         try {
           if (fs.existsSync(`/sys/class/gpio/gpio${this.MOTION_GPIO}`)) {
             fs.writeFileSync('/sys/class/gpio/unexport', String(this.MOTION_GPIO));
-            console.log(`♻️  Cleaned up stale GPIO ${this.MOTION_GPIO} export`);
+            // Small sync delay to let kernel process unexport
+            const start = Date.now();
+            while (Date.now() - start < 100) {}
           }
         } catch (e) {}
 
-        // Try to initialize with 'both' edges. If it fails with EINVAL, try 'rising'.
+        // 2. Try simple initialization first (no edge detection)
         try {
           this.pir = new Gpio(this.MOTION_GPIO, 'in', 'both');
         } catch (e: any) {
-          if (e.code === 'EINVAL') {
-            console.warn(`⚠️ PIR 'both' edges not supported on GPIO ${this.MOTION_GPIO}, falling back to 'rising'`);
+          console.warn(`⚠️ PIR 'both' edges failed: ${e.message}. Trying 'rising'...`);
+          try {
             this.pir = new Gpio(this.MOTION_GPIO, 'in', 'rising');
-          } else {
-            throw e;
+          } catch (e2: any) {
+             console.warn(`⚠️ PIR 'rising' edges failed: ${e2.message}. Trying basic 'in'...`);
+             this.pir = new Gpio(this.MOTION_GPIO, 'in');
           }
         }
         
@@ -51,22 +54,17 @@ export class MotionService {
             console.error('[MotionService] Error watching PIR:', err);
             return;
           }
-
           const isDetected = value === 1;
-          if (isDetected) {
-            this.lastMotionTime = Date.now();
-          }
-
-          if (this.io) {
-            this.io.emit('motion:update', { 
-              isDetected, 
-              timestamp: this.lastMotionTime 
-            });
-          }
+          if (isDetected) this.lastMotionTime = Date.now();
+          if (this.io) this.io.emit('motion:update', { isDetected, timestamp: this.lastMotionTime });
         });
 
       } catch (error: any) {
-        console.warn(`⚠️ PIR Sensor hardware error: ${error.message}. Mock mode enabled.`);
+        let msg = error.message;
+        if (msg.includes('EINVAL') || msg.includes('EACCES')) {
+          msg += ' (If on Pi 5, use node-libgpiod instead of onoff)';
+        }
+        console.warn(`❌ PIR Sensor hardware error: ${msg}. Mock mode enabled.`);
       }
     } else {
       console.log('[MotionService] Non-linux platform. Running in simulation mode.');
