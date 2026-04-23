@@ -8,7 +8,7 @@ export class MotionService {
   private pir: any = null;
   private isMotionEnabled: boolean = true;
   private lastMotionTime: number = Date.now();
-  private MOTION_GPIO = 4; // Default GPIO 4 (Physical Pin 7)
+  private MOTION_GPIO = Number(process.env.PIR_GPIO) || 4; // Default GPIO 4 (Physical Pin 7)
 
   constructor() {
     this.initHardware();
@@ -45,8 +45,8 @@ export class MotionService {
           }
         });
 
-      } catch (error) {
-        console.warn('⚠️ PIR Sensor hardware not found or module missing. Mock mode enabled.');
+      } catch (error: any) {
+        console.warn(`⚠️ PIR Sensor hardware error: ${error.message}. Mock mode enabled.`);
       }
     } else {
       console.log('[MotionService] Non-linux platform. Running in simulation mode.');
