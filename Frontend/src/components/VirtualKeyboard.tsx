@@ -59,29 +59,34 @@ export const VirtualKeyboard = () => {
   const handleKeyPress = (key: string) => {
     if (!activeInput) return;
     
-    // Ensure input is focused for execCommand to work
     activeInput.focus();
+    const start = activeInput.selectionStart || 0;
+    const end = activeInput.selectionEnd || 0;
     
     if (key === '{backspace}') {
-      // Use native delete command to handle cursor and history correctly
-      document.execCommand('delete', false);
+      const newPos = Math.max(0, start - (start === end ? 1 : 0));
+      if (start === end && start > 0) {
+        activeInput.setRangeText('', start - 1, end, 'end');
+      } else {
+        activeInput.setRangeText('', start, end, 'end');
+      }
+      activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+      setTimeout(() => activeInput?.setSelectionRange(newPos, newPos), 0);
     } else if (key === '{enter}') {
-        activeInput.dispatchEvent(new KeyboardEvent('keydown', { 
-          key: 'Enter', 
-          code: 'Enter', 
-          bubbles: true,
-          cancelable: true
-        }));
-        if (activeInput.form) {
-            activeInput.form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-        }
+        activeInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+        if (activeInput.form) activeInput.form.dispatchEvent(new Event('submit', { bubbles: true }));
     } else if (key === '{shift}') {
       setIsShift(!isShift);
-    } else if (key === '{space}') {
-      document.execCommand('insertText', false, ' ');
     } else {
-      const char = isShift ? key.toUpperCase() : key;
-      document.execCommand('insertText', false, char);
+      const char = key === '{space}' ? ' ' : (isShift ? key.toUpperCase() : key);
+      const newPos = start + char.length;
+      activeInput.setRangeText(char, start, end, 'end');
+      activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+      
+      setTimeout(() => {
+        if (activeInput) activeInput.setSelectionRange(newPos, newPos);
+      }, 0);
+      
       if (isShift) setIsShift(false);
     }
   };

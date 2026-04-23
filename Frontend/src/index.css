@@ -79,11 +79,13 @@ body {
   width: 100vw;
   -webkit-font-smoothing: antialiased;
   user-select: none;
+  touch-action: pan-y; /* Enable vertical panning globally */
 }
 
 #root {
   height: 100%;
   width: 100%;
+  touch-action: pan-y;
 }
 
 .mirror-container {
@@ -97,6 +99,7 @@ body {
   background: transparent;
   pointer-events: none;
   z-index: 1;
+  touch-action: pan-y;
 }
 
 .mirror-container > .top-bar,
@@ -120,7 +123,7 @@ input,
   height: 100%;
   background-color: var(--bg-dark);
   z-index: 0;
-  touch-action: none;
+  touch-action: none; /* Keep none for the simulation swirls */
 }
 
 .top-bar {
