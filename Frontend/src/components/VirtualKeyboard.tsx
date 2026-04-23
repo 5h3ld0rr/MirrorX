@@ -58,6 +58,7 @@ export const VirtualKeyboard = () => {
 
   const handleKeyPress = (key: string) => {
     if (!activeInput) return;
+    activeInput.focus();
     
     const start = activeInput.selectionStart || 0;
     const end = activeInput.selectionEnd || 0;
