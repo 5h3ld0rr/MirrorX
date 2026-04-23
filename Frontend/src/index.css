@@ -24,21 +24,21 @@
   box-sizing: border-box;
 }
 
-/* ─── Touch Scroll Fix (Raspberry Pi Touchscreen) ─────────────────────────
-   The fluid canvas sets touch-action:none globally which blocks swipe-to-scroll.
-   Re-enable vertical pan on any overflow-scroll/auto element so finger-drag
-   scrolling works on the Pi touch display without breaking canvas gestures.
-──────────────────────────────────────────────────────────────────────────── */
-[style*="overflow-y: auto"],
-[style*="overflowY: auto"],
-[style*="overflow: auto"],
-[style*="overflow-y: scroll"],
-[style*="overflowY: scroll"],
+/* ─── Touch Scroll Fix (Raspberry Pi Touchscreen) ───────────────────────── */
+[style*="overflow"],
+.app-content,
 .app-scroll,
-.scroll-y {
+.scroll-y,
+.modal,
+.glass-panel {
   touch-action: pan-y !important;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain;
+}
+
+.mirror-container,
+.auth-overlay {
+  touch-action: pan-y;
 }
 
 /* Custom Scrollbar - High Fidelity */
