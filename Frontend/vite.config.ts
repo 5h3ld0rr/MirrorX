@@ -27,10 +27,6 @@ export default defineConfig(() => {
           rewrite: (path) => path.replace(/^\/api\/geocoding/, '')
         }
       }
-    },
-
-    preview: {
-      port: 80
     }
   }
 })
