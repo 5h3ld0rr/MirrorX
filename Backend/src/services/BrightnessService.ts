@@ -86,16 +86,18 @@ class BrightnessService {
   }
 
   private calculateBrightness(lux: number): number {
-    // Increased range for more pronounced effect
-    // Min 2% for total darkness, Max 100% for high light (up to 2000 lux)
-    if (lux <= 0.5) return 2;
-    
-    const maxLux = 2000;
-    const minB = 2;
+    // Increased sensitivity: reach 100% brightness at 800 lux (bright indoor)
+    // Minimum floor increased to 10% for better visibility
+    const maxLux = 800; 
+    const minB = 10;
     const maxB = 100;
     
-    // Logarithmic curve for natural perception
-    let b = minB + (Math.log10(lux + 1) / Math.log10(maxLux + 1)) * (maxB - minB);
+    if (lux <= 0.1) return minB;
+    if (lux >= maxLux) return maxB;
+    
+    // Square root curve: rises quickly in low light to ensure visibility, then tapers
+    const normalized = lux / maxLux;
+    const b = minB + Math.sqrt(normalized) * (maxB - minB);
     
     return Math.min(maxB, Math.max(minB, Math.round(b)));
   }

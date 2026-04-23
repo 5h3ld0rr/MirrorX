@@ -63,14 +63,19 @@ export const VirtualKeyboard = () => {
     const start = activeInput.selectionStart || 0;
     const end = activeInput.selectionEnd || 0;
     
+    const nativeSetter = (activeInput: any, val: string) => {
+      const prototype = activeInput instanceof HTMLTextAreaElement 
+        ? window.HTMLTextAreaElement.prototype 
+        : window.HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+      setter?.call(activeInput, val);
+      activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
     if (key === '{backspace}') {
       const newPos = Math.max(0, start - (start === end ? 1 : 0));
-      if (start === end && start > 0) {
-        activeInput.setRangeText('', start - 1, end, 'end');
-      } else {
-        activeInput.setRangeText('', start, end, 'end');
-      }
-      activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+      const newVal = activeInput.value.slice(0, Math.max(0, start - (start === end ? 1 : 0))) + activeInput.value.slice(end);
+      nativeSetter(activeInput, newVal);
       setTimeout(() => activeInput?.setSelectionRange(newPos, newPos), 0);
     } else if (key === '{enter}') {
         activeInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
@@ -79,9 +84,10 @@ export const VirtualKeyboard = () => {
       setIsShift(!isShift);
     } else {
       const char = key === '{space}' ? ' ' : (isShift ? key.toUpperCase() : key);
+      const newVal = activeInput.value.slice(0, start) + char + activeInput.value.slice(end);
       const newPos = start + char.length;
-      activeInput.setRangeText(char, start, end, 'end');
-      activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+      
+      nativeSetter(activeInput, newVal);
       
       setTimeout(() => {
         if (activeInput) activeInput.setSelectionRange(newPos, newPos);
