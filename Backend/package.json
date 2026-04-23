@@ -37,7 +37,6 @@
     "@types/i2c-bus": "^5.1.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
-    "@types/onoff": "^3.2.7",
     "@types/node": "^22.19.17",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
