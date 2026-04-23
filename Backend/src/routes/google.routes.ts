@@ -13,13 +13,13 @@ router.get("/calendar/v3/calendars/:calendarId/events", async (req: Request, res
     const { key, timeMin, timeMax, singleEvents } = req.query;
 
     const response = await axios.get(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId as string)}/events`,
       {
         params: {
-          key,
-          timeMin,
-          timeMax,
-          singleEvents,
+          key: key as any,
+          timeMin: timeMin as any,
+          timeMax: timeMax as any,
+          singleEvents: singleEvents as any,
           maxResults: 250
         }
       }
