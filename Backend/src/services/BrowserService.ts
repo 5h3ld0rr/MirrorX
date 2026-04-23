@@ -27,8 +27,9 @@ export class BrowserService {
     
     if (process.platform === 'linux') {
       // Optimized for Raspberry Pi (Kiosk Mode)
-      // Prepend DISPLAY=:0 to ensure it opens on the physical screen
-      command = `DISPLAY=:0 chromium-browser --kiosk --app=${url} --noerrdialogs --disable-infobars --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --disable-session-crashed-bubble --user-data-dir=/tmp/mirror_browser`;
+      // Robust detection of the browser executable
+      const chromeFlags = `--kiosk --app=${url} --noerrdialogs --disable-infobars --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --disable-session-crashed-bubble --user-data-dir=/tmp/mirror_browser`;
+      command = `export DISPLAY=:0; for b in chromium-browser chromium google-chrome; do if command -v $b >/dev/null; then $b ${chromeFlags}; break; fi; done`;
     } else if (process.platform === 'win32') {
       // For Windows, calling chrome directly is more reliable for kiosk mode
       command = `start chrome --new-window --kiosk --app=${url} --noerrdialogs --disable-infobars --disable-session-crashed-bubble --user-data-dir=%TEMP%\\mirror_browser`;
