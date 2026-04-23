@@ -54,7 +54,7 @@ export const NewsApp = () => {
     setError(null);
     try {
       const catId = categories[catName as keyof typeof categories];
-      const response = await axios.get(`/api/helakuru/?category=${catId}`);
+      const response = await axios.get('/api/helakuru/');
       
       const rawData: EsanaArticle[] = response.data?.news_data?.data || [];
 
@@ -66,8 +66,8 @@ export const NewsApp = () => {
         setAvailableCategories(validNames);
       }
       
-      const filteredData = (catName === 'All') 
-        ? rawData 
+      const filteredData = (catName === 'All')
+        ? rawData
         : rawData.filter((item: EsanaArticle) => String(item.category) === catId);
 
       const mapped: NewsArticle[] = filteredData.map((item: EsanaArticle) => {
