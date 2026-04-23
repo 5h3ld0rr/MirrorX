@@ -24,21 +24,13 @@ export class MotionService {
         const { Gpio } = require('onoff');
         const fs = require('fs');
         
-        // 1. Force unexport if already exists to ensure clean state
-        try {
-          if (fs.existsSync(`/sys/class/gpio/gpio${this.MOTION_GPIO}`)) {
-            fs.writeFileSync('/sys/class/gpio/unexport', String(this.MOTION_GPIO));
-            // Small sync delay to let kernel process unexport
-            const start = Date.now();
-            while (Date.now() - start < 100) {}
-          }
-        } catch (e) {}
+        console.log(`[MotionService] Target BCM GPIO: ${this.MOTION_GPIO}`);
 
-        // 2. Try simple initialization first (no edge detection)
+        // Try to initialize with 'both' edges.
         try {
           this.pir = new Gpio(this.MOTION_GPIO, 'in', 'both');
         } catch (e: any) {
-          console.warn(`⚠️ PIR 'both' edges failed: ${e.message}. Trying 'rising'...`);
+          console.warn(`⚠️ PIR 'both' edges failed on GPIO ${this.MOTION_GPIO}: ${e.message}. Trying 'rising'...`);
           try {
             this.pir = new Gpio(this.MOTION_GPIO, 'in', 'rising');
           } catch (e2: any) {
@@ -60,11 +52,7 @@ export class MotionService {
         });
 
       } catch (error: any) {
-        let msg = error.message;
-        if (msg.includes('EINVAL') || msg.includes('EACCES')) {
-          msg += ' (If on Pi 5, use node-libgpiod instead of onoff)';
-        }
-        console.warn(`❌ PIR Sensor hardware error: ${msg}. Mock mode enabled.`);
+        console.warn(`❌ PIR Sensor hardware error on GPIO ${this.MOTION_GPIO}: ${error.message}. Mock mode enabled.`);
       }
     } else {
       console.log('[MotionService] Non-linux platform. Running in simulation mode.');
