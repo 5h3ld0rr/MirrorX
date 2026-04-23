@@ -86,12 +86,18 @@ class BrightnessService {
   }
 
   private calculateBrightness(lux: number): number {
-    // Basic logarithmic mapping for natural brightness feel
-    // Lux range 0 - 1000 (typical indoor)
-    // Brightness output 10 - 100 (percentage)
-    if (lux <= 0) return 10;
-    let b = 10 + (Math.log10(lux + 1) / Math.log10(1001)) * 90;
-    return Math.min(100, Math.max(10, Math.round(b)));
+    // Increased range for more pronounced effect
+    // Min 2% for total darkness, Max 100% for high light (up to 2000 lux)
+    if (lux <= 0.5) return 2;
+    
+    const maxLux = 2000;
+    const minB = 2;
+    const maxB = 100;
+    
+    // Logarithmic curve for natural perception
+    let b = minB + (Math.log10(lux + 1) / Math.log10(maxLux + 1)) * (maxB - minB);
+    
+    return Math.min(maxB, Math.max(minB, Math.round(b)));
   }
 }
 
