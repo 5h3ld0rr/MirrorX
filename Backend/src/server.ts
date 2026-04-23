@@ -54,7 +54,6 @@ cameraFaceService.startService();
 httpServer.listen(port, () => {
   console.log(`🚀 MirrorX Backend running on port ${port} (Socket.io/Hardware enabled)`);
   
-  // Automatically open the mirror interface
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     
   setTimeout(() => {

@@ -21,19 +21,24 @@ export class BrowserService {
   public openUrl(url: string) {
     if (this.browserStarted) return;
 
-    console.log(`🌐 Opening browser for: ${url}`);
+    const isProduction = process.env.NODE_ENV === 'production';
+    console.log(`🌐 Opening browser for: ${url} (Env: ${process.env.NODE_ENV || 'development'})`);
     
     let command = '';
     
     if (process.platform === 'linux') {
-      // Optimized for Raspberry Pi (Kiosk Mode)
-      // Added permission bypass flags and treated localhost as a secure origin for camera/location access
-      const chromeFlags = `--kiosk --app=${url} --noerrdialogs --disable-infobars --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --disable-session-crashed-bubble --user-data-dir=/tmp/mirror_browser --password-store=basic --use-fake-ui-for-media-stream --unsafely-treat-insecure-origin-as-secure=http://localhost:5173,http://localhost:4173`;
+      // Optimized for Raspberry Pi
+      const kioskFlags = isProduction 
+        ? `--kiosk --app=${url}` 
+        : `--start-maximized ${url}`;
+        
+      const commonFlags = `--noerrdialogs --disable-infobars --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --disable-session-crashed-bubble --user-data-dir=/tmp/mirror_browser --password-store=basic --use-fake-ui-for-media-stream --unsafely-treat-insecure-origin-as-secure=http://localhost:5173,http://localhost:4173`;
       
-      // Search for the V4L2 converter in all common paths (libcamera and the new rpicam stack)
+      const chromeFlags = `${kioskFlags} ${commonFlags}`;
+      
+      // Search for the V4L2 converter
       const preload = `export LD_PRELOAD=$(ls /usr/lib/aarch64-linux-gnu/libcamera/v4l2-convert.so /usr/lib/arm-linux-gnueabihf/libcamera/v4l2-convert.so /usr/lib/aarch64-linux-gnu/rpicam-apps/v4l2-convert.so 2>/dev/null | head -n 1)`;
       
-      // Support both X11 (DISPLAY) and Wayland
       command = `
         export DISPLAY=:0; 
         export WAYLAND_DISPLAY=wayland-0; 
@@ -44,8 +49,13 @@ export class BrowserService {
         fi
       `.replace(/\n/g, ' ').trim();
     } else if (process.platform === 'win32') {
-      // For Windows, calling chrome directly is more reliable for kiosk mode
-      command = `start chrome --new-window --kiosk --app=${url} --noerrdialogs --disable-infobars --disable-session-crashed-bubble --user-data-dir=%TEMP%\\mirror_browser --password-store=basic`;
+      const kioskFlags = isProduction 
+        ? `--kiosk --app=${url}` 
+        : `--start-maximized ${url}`;
+        
+      const commonFlags = `--noerrdialogs --disable-infobars --disable-session-crashed-bubble --user-data-dir=%TEMP%\\mirror_browser --password-store=basic`;
+      
+      command = `start chrome --new-window ${kioskFlags} ${commonFlags}`;
     } else {
       command = `open ${url}`;
     }
