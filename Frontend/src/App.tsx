@@ -59,6 +59,18 @@ function App() {
   const [user, setUser] = useState<UserProfile | null>();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {
+          // Silent catch as some browsers might block this
+        });
+      }
+    };
+    document.addEventListener('click', handleFirstInteraction);
+    return () => document.removeEventListener('click', handleFirstInteraction);
+  }, []);
   const [showWelcome, setShowWelcome] = useState(false);
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
   const [activeApp, setActiveApp] = useState<string | null>(null);

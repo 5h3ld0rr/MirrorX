@@ -35,9 +35,11 @@ module.exports = {
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
+        FRONTEND_URL: 'http://localhost:4173'
       },
       env_dev: {
         NODE_ENV: 'development',
+        FRONTEND_URL: 'http://localhost:5173'
       },
       error_file: `${LOGS}/backend-error.log`,
       out_file: `${LOGS}/backend-out.log`,

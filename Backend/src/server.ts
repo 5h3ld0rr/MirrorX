@@ -7,6 +7,7 @@ import routes from "./routes/index.js";
 import { brightnessService } from "./services/BrightnessService.js";
 import { motionService } from "./services/MotionService.js";
 import { cameraFaceService } from "./services/CameraFaceService.js";
+import { browserService } from "./services/BrowserService.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -52,6 +53,13 @@ cameraFaceService.startService();
 
 httpServer.listen(port, () => {
   console.log(`🚀 MirrorX Backend running on port ${port} (Socket.io/Hardware enabled)`);
+  
+  // Automatically open the mirror interface
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    
+  setTimeout(() => {
+    browserService.openUrl(frontendUrl);
+  }, 3000);
 });
 
 export default app;
