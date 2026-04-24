@@ -86,12 +86,20 @@ class BrightnessService {
   }
 
   private calculateBrightness(lux: number): number {
-    // Basic logarithmic mapping for natural brightness feel
-    // Lux range 0 - 1000 (typical indoor)
-    // Brightness output 10 - 100 (percentage)
-    if (lux <= 0) return 10;
-    let b = 10 + (Math.log10(lux + 1) / Math.log10(1001)) * 90;
-    return Math.min(100, Math.max(10, Math.round(b)));
+    // Ultra sensitivity: reach 100% at 300 lux (standard room light)
+    // Minimum floor increased to 30%
+    const maxLux = 300; 
+    const minB = 30;
+    const maxB = 100;
+    
+    if (lux <= 0.1) return minB;
+    if (lux >= maxLux) return maxB;
+    
+    // Stiff Power Curve (0.4 exponent): Gets very bright very quickly
+    const normalized = lux / maxLux;
+    const b = minB + Math.pow(normalized, 0.4) * (maxB - minB);
+    
+    return Math.min(maxB, Math.max(minB, Math.round(b)));
   }
 }
 

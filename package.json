@@ -6,9 +6,8 @@
     "build": "npm run build --prefix Backend && npm run build --prefix Frontend",
     "install-all": "npm install --prefix Backend && npm install --prefix Frontend",
     "dev": "pm2 start ecosystem.config.js --env dev && pm2 logs",
-    "start": "npm run build && pm2 start ecosystem.config.js",
+    "start": "git pull && npm run install-all && npm run build && pm2 start ecosystem.config.js",
     "stop": "pm2 delete all",
-    "restart": "pm2 restart all",
     "logs": "pm2 logs"
   }
 }

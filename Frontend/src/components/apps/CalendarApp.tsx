@@ -434,7 +434,17 @@ export const CalendarApp = ({ user }: { user: any }) => {
         </div>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }} className="hide-scrollbar">
+      <div 
+        style={{ 
+          flex: 1, 
+          overflowY: 'auto', 
+          overflowX: 'hidden',
+          paddingBottom: '12rem',
+          display: 'flex',
+          flexDirection: 'column'
+        }} 
+        className="hide-scrollbar"
+      >
         {viewMode === 'month' && (
           <>
             <div style={{ 
@@ -504,19 +514,19 @@ export const CalendarApp = ({ user }: { user: any }) => {
                       flexDirection: 'column', 
                       gap: '4px',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      minHeight: '100px'
-                    }}
-                  >
-                    <div style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 0.9 }}>{dayNum}</div>
-                    {holiday && <div style={{ fontSize: '0.6rem', color: isToday ? '#ffffff' : getDayTypeColor(holiday.type), fontWeight: 700, borderRadius: '4px', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{holiday.name}</div>}
-                    {customE.length > 0 && <div style={{ marginTop: 'auto', display: 'flex', gap: '2px' }}>{customE.map((_, idx) => <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'black' : 'var(--accent-primary)' }} />)}</div>}
-                  </motion.button>
-                );
-              })}
-            </div>
+                    minHeight: '80px'
+                  }}
+                >
+                  <div style={{ fontSize: '1.8rem', fontWeight: 900, lineHeight: 0.9 }}>{dayNum}</div>
+                  {holiday && <div style={{ fontSize: '0.6rem', color: isToday ? '#ffffff' : getDayTypeColor(holiday.type), fontWeight: 700, borderRadius: '4px', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{holiday.name}</div>}
+                  {customE.length > 0 && <div style={{ marginTop: 'auto', display: 'flex', gap: '2px' }}>{customE.map((_, idx) => <div key={idx} style={{ width: '4px', height: '4px', borderRadius: '50%', background: isToday ? 'black' : 'var(--accent-primary)' }} />)}</div>}
+                </motion.button>
+              );
+            })}
+          </div>
 
-            {/* Monthly Summary Section */}
-            <div style={{ marginTop: '4rem', padding: '0 1rem 5rem' }}>
+          {/* Monthly Summary Section */}
+          <div style={{ marginTop: '4rem', padding: '0 1rem 20rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h3 style={{ fontSize: '1.8rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>
                   {months[viewDate.getMonth()]}'s Schedule
@@ -688,7 +698,7 @@ export const CalendarApp = ({ user }: { user: any }) => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }} className="hide-scrollbar">
+                <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }} className="hide-scrollbar">
                   {(userEvents[selectedDate!] || []).length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.3, border: '2px dashed rgba(255,255,255,0.1)', borderRadius: '24px' }}>No events</div>
                   ) : (

@@ -8,7 +8,7 @@ export class MotionService {
   private pir: any = null;
   private isMotionEnabled: boolean = true;
   private lastMotionTime: number = Date.now();
-  private MOTION_GPIO = 4; // Default GPIO 4 (Physical Pin 7)
+  private MOTION_GPIO = Number(process.env.PIR_GPIO) || 4; // Default GPIO 4 (Physical Pin 7)
 
   constructor() {
     this.initHardware();
@@ -22,7 +22,22 @@ export class MotionService {
     if (process.platform === 'linux') {
       try {
         const { Gpio } = require('onoff');
-        this.pir = new Gpio(this.MOTION_GPIO, 'in', 'both');
+        const fs = require('fs');
+        
+        console.log(`[MotionService] Target BCM GPIO: ${this.MOTION_GPIO}`);
+
+        // Try to initialize with 'both' edges.
+        try {
+          this.pir = new Gpio(this.MOTION_GPIO, 'in', 'both');
+        } catch (e: any) {
+          console.warn(`⚠️ PIR 'both' edges failed on GPIO ${this.MOTION_GPIO}: ${e.message}. Trying 'rising'...`);
+          try {
+            this.pir = new Gpio(this.MOTION_GPIO, 'in', 'rising');
+          } catch (e2: any) {
+             console.warn(`⚠️ PIR 'rising' edges failed: ${e2.message}. Trying basic 'in'...`);
+             this.pir = new Gpio(this.MOTION_GPIO, 'in');
+          }
+        }
         
         console.log(`✅ PIR Sensor initialized on GPIO ${this.MOTION_GPIO}`);
 
@@ -31,22 +46,13 @@ export class MotionService {
             console.error('[MotionService] Error watching PIR:', err);
             return;
           }
-
           const isDetected = value === 1;
-          if (isDetected) {
-            this.lastMotionTime = Date.now();
-          }
-
-          if (this.io) {
-            this.io.emit('motion:update', { 
-              isDetected, 
-              timestamp: this.lastMotionTime 
-            });
-          }
+          if (isDetected) this.lastMotionTime = Date.now();
+          if (this.io) this.io.emit('motion:update', { isDetected, timestamp: this.lastMotionTime });
         });
 
-      } catch (error) {
-        console.warn('⚠️ PIR Sensor hardware not found or module missing. Mock mode enabled.');
+      } catch (error: any) {
+        console.warn(`❌ PIR Sensor hardware error on GPIO ${this.MOTION_GPIO}: ${error.message}. Mock mode enabled.`);
       }
     } else {
       console.log('[MotionService] Non-linux platform. Running in simulation mode.');

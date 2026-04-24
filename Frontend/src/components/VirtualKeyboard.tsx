@@ -59,48 +59,42 @@ export const VirtualKeyboard = () => {
   const handleKeyPress = (key: string) => {
     if (!activeInput) return;
     
+    activeInput.focus();
     const start = activeInput.selectionStart || 0;
     const end = activeInput.selectionEnd || 0;
-    const val = activeInput.value;
-    let newVal = val;
+    
+    const nativeSetter = (activeInput: any, val: string) => {
+      const prototype = activeInput instanceof HTMLTextAreaElement 
+        ? window.HTMLTextAreaElement.prototype 
+        : window.HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+      setter?.call(activeInput, val);
+      activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+    };
 
     if (key === '{backspace}') {
-      if (start === end && start > 0) {
-        newVal = val.slice(0, start - 1) + val.slice(end);
-        updateInput(newVal, start - 1);
-      } else if (start !== end) {
-        newVal = val.slice(0, start) + val.slice(end);
-        updateInput(newVal, start);
-      }
+      const newPos = Math.max(0, start - (start === end ? 1 : 0));
+      const newVal = activeInput.value.slice(0, Math.max(0, start - (start === end ? 1 : 0))) + activeInput.value.slice(end);
+      nativeSetter(activeInput, newVal);
+      setTimeout(() => activeInput?.setSelectionRange(newPos, newPos), 0);
     } else if (key === '{enter}') {
         activeInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
-        if (activeInput.form) {
-            activeInput.form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-        }
+        if (activeInput.form) activeInput.form.dispatchEvent(new Event('submit', { bubbles: true }));
     } else if (key === '{shift}') {
       setIsShift(!isShift);
-    } else if (key === '{space}') {
-      newVal = val.slice(0, start) + ' ' + val.slice(end);
-      updateInput(newVal, start + 1);
     } else {
-      const char = isShift ? key.toUpperCase() : key;
-      newVal = val.slice(0, start) + char + val.slice(end);
-      updateInput(newVal, start + 1);
+      const char = key === '{space}' ? ' ' : (isShift ? key.toUpperCase() : key);
+      const newVal = activeInput.value.slice(0, start) + char + activeInput.value.slice(end);
+      const newPos = start + char.length;
+      
+      nativeSetter(activeInput, newVal);
+      
+      setTimeout(() => {
+        if (activeInput) activeInput.setSelectionRange(newPos, newPos);
+      }, 0);
+      
       if (isShift) setIsShift(false);
     }
-  };
-
-  const updateInput = (newVal: string, newPos: number) => {
-    if (!activeInput) return;
-    
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-      activeInput.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype,
-      "value"
-    )?.set;
-    
-    nativeInputValueSetter?.call(activeInput, newVal);
-    activeInput.dispatchEvent(new Event('input', { bubbles: true }));
-    activeInput.setSelectionRange(newPos, newPos);
   };
 
   const rows = [
@@ -112,7 +106,16 @@ export const VirtualKeyboard = () => {
   ];
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 10000, pointerEvents: 'none' }} ref={dragConstraintsRef}>
+    <div 
+      style={{ 
+        position: 'fixed', 
+        inset: activeInput ? 0 : 'auto', 
+        zIndex: 10000, 
+        pointerEvents: 'none',
+        visibility: activeInput ? 'visible' : 'hidden'
+      }} 
+      ref={dragConstraintsRef}
+    >
        <AnimatePresence>
          {activeInput && (
            <motion.div 

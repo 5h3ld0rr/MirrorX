@@ -126,7 +126,7 @@ export const NotesApp = () => {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', paddingTop: '1rem' }}>
+      <div style={{ flex: 1, overflow: 'auto', paddingTop: '1rem', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
         {isLoading ? (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
             <Loader2 className="animate-spin" size={32} color="var(--accent-primary)" />

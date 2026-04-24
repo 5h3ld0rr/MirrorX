@@ -6,6 +6,8 @@ import { Server } from "socket.io";
 import routes from "./routes/index.js";
 import { brightnessService } from "./services/BrightnessService.js";
 import { motionService } from "./services/MotionService.js";
+import { cameraFaceService } from "./services/CameraFaceService.js";
+import { browserService } from "./services/BrowserService.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -33,6 +35,11 @@ io.on("connection", (socket) => {
     brightnessService.setAutoBrightness(enabled);
   });
 
+  socket.on("face:toggle", (enabled: boolean) => {
+    if (enabled) cameraFaceService.startService();
+    else cameraFaceService.stopService();
+  });
+
   socket.on("disconnect", () => {
     console.log(`🔌 Client disconnected: ${socket.id}`);
   });
@@ -41,9 +48,17 @@ io.on("connection", (socket) => {
 // Initialize Services
 brightnessService.setIo(io);
 motionService.setIo(io);
+cameraFaceService.setIo(io);
+cameraFaceService.startService();
 
 httpServer.listen(port, () => {
   console.log(`🚀 MirrorX Backend running on port ${port} (Socket.io/Hardware enabled)`);
+  
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    
+  setTimeout(() => {
+    browserService.openUrl(frontendUrl);
+  }, 3000);
 });
 
 export default app;

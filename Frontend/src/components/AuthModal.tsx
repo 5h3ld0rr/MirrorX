@@ -256,15 +256,32 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth, isOnline }: {
                 {!isLogin && (
                   <div className="input-group">
                     <label>Full Name</label>
-                    <input type="text" placeholder="John Doe" value={name} onChange={e => setName(e.target.value)} />
+                    <input 
+                      type="text" 
+                      placeholder="John Doe" 
+                      value={name} 
+                      onChange={e => setName(e.target.value)}
+                      autoComplete="off"
+                      spellCheck="false"
+                      autoCorrect="off"
+                    />
                   </div>
                 )}
-
+ 
                 <div className="input-group">
                   <label>Email Address</label>
-                  <input type="email" placeholder="name@domain.com" value={email} onChange={e => setEmail(e.target.value)} />
+                  <input 
+                    type="text" 
+                    inputMode="email"
+                    placeholder="name@domain.com" 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)}
+                    autoComplete="off"
+                    spellCheck="false"
+                    autoCorrect="off"
+                  />
                 </div>
-
+ 
                 <div className="input-group">
                   <label>Password</label>
                   <div style={{ position: 'relative' }}>
@@ -274,6 +291,9 @@ export const AuthModal = ({ isOpen, onClose, onUserAuth, isOnline }: {
                       value={password} 
                       onChange={e => setPassword(e.target.value)} 
                       style={{ paddingRight: '3.5rem' }}
+                      autoComplete="off"
+                      spellCheck="false"
+                      autoCorrect="off"
                     />
                     <button
                       type="button"
